@@ -9,9 +9,9 @@ LedgerLock closes that loop three ways — **ERP orders ↔ gateway ledger ↔ b
 statement** — reports its match rate against a known answer key, and hands back
 an exception list it does not pretend to have solved.
 
-> Status: **stage 1 of 3 complete.** The synthetic world, its relational ground
-> truth and the exception taxonomy are built and tested. The reconciliation
-> tiers and the scoring harness land next.
+> Status: **T1 + scoring harness complete.** The synthetic world, the twelve-code
+> taxonomy, the deterministic tier and the eval harness all run. T2 (rules,
+> tolerances, subset-sum) and T3 (model-assisted residue) are next.
 
 ---
 
@@ -129,6 +129,8 @@ pip install -e .
 python -m ledgerlock taxonomy                      # the codes, and what they mean
 python -m ledgerlock generate --profile default --seed 42
 python -m ledgerlock inspect                       # read the sources back
+python -m ledgerlock run                           # reconcile -> data/out/recon.json
+python -m ledgerlock eval                          # score  -> data/out/report.md
 pytest -q
 ```
 
@@ -142,6 +144,38 @@ Same profile + same seed produces a **byte-identical** dataset
 (`test_same_seed_is_byte_identical`), and every published figure cites the
 `manifest.json` that carries its seed, so any number here is reproducible from a
 clean clone.
+
+## Results: T1 alone
+
+Profile `default`, seed 42. 1,125 source records, 89 injected exceptions.
+
+| metric | value |
+|---|---|
+| settlement -> bank matching | **81.8%** (18/22) |
+| order -> gateway verification | **100.0%** (508/508) |
+| **false matches asserted** | **0** |
+| **false alarms on clean records** | **0** |
+| exceptions detected | 69/89 |
+| ...correctly classified | 45 |
+| ...flagged but honestly unnamed | 28 |
+| ...undetected | 20 |
+
+Two numbers, never blended. `order_entry` is 508 links where the gateway hands
+over the join key in a column; averaging it in would report 99.2% and hide an
+18-point shortfall on the part that is actually hard. See D7 in `DECISIONS.md`.
+
+What T1 does and does not close:
+
+- **Classified:** E01 duplicates, E02 missing in gateway, E03 orphans,
+  E06 unsettled, E11 split settlements.
+- **Detected, deliberately unnamed:** E04, E05, E08, E09, E10 -- 28 findings
+  reported with their evidence and their rupee size, but no code guessed.
+  Naming them needs a tolerance or a search, and T1 has neither by definition.
+- **Invisible to T1, reported as undetected:** E07 cross-cycle refunds (needs
+  lookback), E12 unexplained adjustments (needs narration semantics).
+
+The 4 missed `settlement_bank` links are exactly the 2 mangled UTRs (E08) and
+the 2 second-halves of merged credits (E10). Nothing else leaks.
 
 ## AI judgment: where the model is *not* used
 
@@ -171,9 +205,12 @@ rate — it is match rate **and false-match rate**.
 - [x] Generator with pre-injection identity proof
 - [x] Twelve injectors, one corruption dimension each
 - [x] Relational ground truth + reproducibility manifest
-- [x] Truth-leak guard, CLI, 26 tests
-- [ ] T1 / T2 / T3 reconciliation tiers
-- [ ] Eval harness: precision, recall, false-match rate, exception-classification accuracy
+- [x] Truth-leak guard, CLI, 54 tests
+- [x] T1 deterministic tier -- threshold-free by definition
+- [x] Eval harness: precision, recall, false-match rate, false-alarm and
+      correctly-refused accounting, markdown report
+- [ ] T2 rules: tolerance bands, cross-cycle lookback, subset-sum
+- [ ] T3 model-assisted residue (E08 narrations, E12 classification)
 - [ ] Exception queue view
 
 See `DECISIONS.md` for what broke on the way here.

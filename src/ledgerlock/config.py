@@ -54,3 +54,9 @@ WORLD_START = date(2026, 6, 1)      # fixed: the generator never reads the clock
 ROUNDING_TOLERANCE_PAISE = 50       # Rs 0.50
 AMOUNT_MATCH_TOLERANCE_PAISE = 0    # exact-match tier admits no slack
 DATE_WINDOW_DAYS = 4                # how far a settlement may drift from T+2
+
+# --- Bank narration ---------------------------------------------------------
+# The gateway's own signature in a bank narration. This is configuration, not a
+# hardcoded answer: a real controller is told what its processor's credits look
+# like. A credit without this marker is somebody else's money.
+PG_NARRATION_MARKERS = ("RAZORPAY",)

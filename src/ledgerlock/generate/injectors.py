@@ -23,7 +23,7 @@ from ..domain.models import BankLine, EntryType, PGEntry, TruthLink
 from ..domain.money import Paise, rupees
 from ..domain.taxonomy import ExceptionCode as EC
 from .. import config
-from . import fees
+from ..domain import fees
 from .engine import World, _stamp, business_day
 
 OPAQUE_NARRATIONS = [
@@ -217,19 +217,27 @@ def e05_material_mismatch(w: World, n: int) -> None:
 # label-only: states the clean world already produces, marked as expected
 # ---------------------------------------------------------------------------
 
-def e06_timing_unsettled(w: World, n: int) -> None:
+def e06_timing_unsettled(w: World, _n: int) -> None:
     """Captured, cycle has not run yet. Correct handling is to defer, not to
-    chase -- so a pipeline that reports these as breaks is crying wolf."""
-    pool = [e for e in w.entries
-            if e.entry_type is EntryType.PAYMENT and not e.settlement_id]
-    for e in _pick(w, pool, n, lambda x: x.entry_id):
+    chase -- so a pipeline that reports these as breaks is crying wolf.
+
+    Label-only, and deliberately labels the WHOLE population rather than a
+    sample: being unsettled is an observable fact about the data, not something
+    we injected. Sampling it would leave identical records half-labelled, and a
+    correct pipeline would be scored down for finding the ones we skipped.
+    """
+    pool = [e for e in w.entries if not e.settlement_id]
+    for e in _pick(w, pool, len(pool), lambda x: x.entry_id):
         w.flag("entry", e.entry_id, EC.TIMING_UNSETTLED,
                "captured after the settlement cut-off for this statement")
 
 
-def e07_cross_cycle_refund(w: World, n: int) -> None:
+def e07_cross_cycle_refund(w: World, _n: int) -> None:
     """A refund settled in a later cycle than the payment it reverses. It drags
-    this cycle's payout down for a sale that was banked weeks ago."""
+    this cycle's payout down for a sale that was banked weeks ago.
+
+    Label-only over the whole population, for the same reason as E06.
+    """
     pay_by_order: dict[str, PGEntry] = {
         e.order_id: e for e in w.entries
         if e.entry_type is EntryType.PAYMENT and e.order_id
@@ -241,7 +249,7 @@ def e07_cross_cycle_refund(w: World, n: int) -> None:
         p = pay_by_order.get(r.order_id or "")
         if p is not None and p.settled_at and p.settled_at < r.settled_at:
             pool.append(r)
-    for r in _pick(w, pool, n, lambda x: x.entry_id):
+    for r in _pick(w, pool, len(pool), lambda x: x.entry_id):
         p = pay_by_order[r.order_id or ""]
         w.flag("entry", r.entry_id, EC.CROSS_CYCLE_REFUND,
                f"reverses {p.entry_id} settled {p.settled_at} in an earlier cycle")

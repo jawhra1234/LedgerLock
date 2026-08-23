@@ -31,7 +31,7 @@
     "pg_entries": 595,
     "bank_lines": 30,
     "truth_links": 1077,
-    "truth_exceptions": 62
+    "truth_exceptions": 89
   },
   "settlements": 20,
   "clean_identity_verified": true,
@@ -70,13 +70,13 @@
       "label": "Unsettled at cut-off",
       "resolvability": "full",
       "expected_tier": "t2_rules",
-      "injected": 10
+      "injected": 28
     },
     "E07": {
       "label": "Cross-cycle refund",
       "resolvability": "full",
       "expected_tier": "t2_rules",
-      "injected": 8
+      "injected": 17
     },
     "E08": {
       "label": "Corrupted UTR in narration",

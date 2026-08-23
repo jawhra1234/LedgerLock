@@ -9,14 +9,14 @@ from ..domain.taxonomy import ExceptionCode as EC
 # Injection rates are expressed per-order so profiles scale coherently. Every
 # code is floored at 1 occurrence, so even the 50-order smoke profile exercises
 # all twelve branches of the pipeline.
+# E06 and E07 are absent on purpose: they are label-only codes covering the
+# whole natural pool, not injected at a rate. See injectors.e06_timing_unsettled.
 DEFAULT_RATES: dict[EC, float] = {
     EC.DUPLICATE_PAYMENT: 0.010,
     EC.MISSING_IN_PG: 0.012,
     EC.ORPHAN_PG_ENTRY: 0.008,
     EC.ROUNDING_DRIFT: 0.030,
     EC.MATERIAL_MISMATCH: 0.006,
-    EC.TIMING_UNSETTLED: 0.020,
-    EC.CROSS_CYCLE_REFUND: 0.016,
     EC.UTR_CORRUPTED: 0.004,
     EC.NON_PG_INFLOW: 0.004,
     EC.MERGED_SETTLEMENT: 0.003,

@@ -6,7 +6,7 @@ rounding artefact or a genuine discrepancy -- never a modelling difference.
 from __future__ import annotations
 
 from .. import config
-from ..domain.money import Paise, apply_rate
+from .money import Paise, apply_rate
 
 
 def mdr_fee(method: str, gross: Paise) -> Paise:

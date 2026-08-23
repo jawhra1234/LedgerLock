@@ -114,17 +114,72 @@ def taxonomy() -> None:
 
 
 @app.command()
-def run(raw: Path = typer.Option(DATA / "raw")) -> None:
-    """Reconcile (tier 1-3). Not built yet."""
-    console.print("[yellow]not implemented yet[/] -- reconciliation tiers land next.")
-    raise typer.Exit(1)
+def run(
+    raw: Path = typer.Option(DATA / "raw"),
+    out: Path = typer.Option(DATA / "out"),
+) -> None:
+    """Reconcile the sources and write the result artifact."""
+    from .pipeline.controller import reconcile_sources
+
+    src = load_sources(raw)
+    result = reconcile_sources(src)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "recon.json").write_text(
+        result.model_dump_json(indent=2), encoding="utf-8")
+
+    console.print(f"[bold]{src.summary()}[/], {result.n_settlements} settlements")
+    t = Table(show_header=False, box=None)
+    t.add_column(style="dim")
+    t.add_column(justify="right")
+    t.add_row("tiers run", "+".join(t_.value for t_ in result.tiers_run))
+    t.add_row("links asserted", f"{len(result.links):,}")
+    t.add_row("findings raised", f"{len(result.findings):,}")
+    t.add_row("...escalated to a human", f"{len(result.escalated):,}")
+    t.add_row("...unnamed (honest residue)", f"{len(result.unclassified):,}")
+    console.print(t)
+
+    by_rule: dict[str, int] = {}
+    for f in result.findings:
+        by_rule[f.rule] = by_rule.get(f.rule, 0) + 1
+    r = Table(title="findings by rule", title_style="bold", title_justify="left")
+    r.add_column("rule")
+    r.add_column("n", justify="right")
+    for rule, n in sorted(by_rule.items(), key=lambda kv: -kv[1]):
+        r.add_row(rule, str(n))
+    console.print(r)
+    console.print()
+    console.print(f"-> {out / 'recon.json'}")
 
 
 @app.command("eval")
-def eval_cmd() -> None:
-    """Score the pipeline against ground truth. Not built yet."""
-    console.print("[yellow]not implemented yet[/] -- needs `run` first.")
-    raise typer.Exit(1)
+def eval_cmd(
+    raw: Path = typer.Option(DATA / "raw"),
+    truth: Path = typer.Option(DATA / "truth"),
+    out: Path = typer.Option(DATA / "out"),
+) -> None:
+    """Score the last `run` against ground truth."""
+    import json
+
+    from .eval.metrics import score
+    from .eval.report import render_console, to_markdown
+    from .io.loaders import load_truth
+    from .pipeline.result import ReconResult
+
+    artifact = out / "recon.json"
+    if not artifact.exists():
+        console.print("[red]no recon.json[/] -- run `python -m ledgerlock run` first.")
+        raise typer.Exit(1)
+
+    result = ReconResult.model_validate_json(artifact.read_text(encoding="utf-8"))
+    manifest_path = truth / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))         if manifest_path.exists() else {}
+
+    s = score(result, load_truth(truth), load_sources(raw), manifest)
+    render_console(s, console)
+    report = out / "report.md"
+    report.write_text(to_markdown(s), encoding="utf-8")
+    console.print()
+    console.print(f"-> {report}")
 
 
 def main() -> None:

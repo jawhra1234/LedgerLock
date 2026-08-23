@@ -135,3 +135,113 @@ views of the same payout, only two kept in step.
 amount break we never injected — an unlabelled exception, which is precisely
 what D2 exists to prevent. Found by a test written *before* the matcher, which
 is the only reason it was cheap.
+
+---
+
+## Day 2 -- 23 Aug 2026
+
+### D7. No blended match rate
+
+**Decision.** The report never prints one combined match rate. It prints
+`settlement -> bank matching` and `order -> gateway verification` separately.
+
+**Why.** The first version printed **99.2%**. That number was arithmetically
+correct and deeply misleading: 508 of the 530 scored links are `order_entry`,
+where the gateway report hands over the join key in a column. The real
+reconciliation -- gateway payout to bank credit, through a UTR buried in a
+narration that the bank may mangle, merge or split -- scored **81.8%**. A
+blended figure would have buried an 18-point shortfall under an easy
+population. Caught it before it reached a report, not after.
+
+### D8. Tier 1 is defined by having no thresholds
+
+**Decision.** T1 admits existence checks, exact key equality and exact
+arithmetic. No tolerance, no date window, no fuzzy score, no model. If a rule
+has to decide "how close is close enough", it is not a T1 rule.
+
+**Why.** It gives the tier boundary a testable definition instead of a vibe,
+and it is what makes T1's output trustworthy enough to post without review.
+It also has a real cost, accepted deliberately: T1 detects E04 rounding drift
+and E05 material mismatch but **refuses to name either**, because telling them
+apart is a question about magnitude. Reporting 28 findings as "flagged, not yet
+explained" is more honest than guessing a code to look complete.
+
+### D9. `entry_settlement` links are excluded from scoring
+
+**Decision.** The pipeline verifies that settlement batches tie, but the
+`entry -> settlement` edge is not counted in the match rate.
+
+**Why.** The gateway report supplies `settlement_id` as a column. Counting
+those ~560 links would have taken the headline close to 100% while proving
+nothing. The exclusion is printed in the report rather than left implicit.
+
+### D10. A corroborating flag is not a false alarm
+
+**Decision.** Findings on records ground truth considers clean are split into
+`false_alarms` and `corroborating`, by checking whether the record shares a true
+edge with something actually broken.
+
+**Why.** When the bank merges two payouts into one credit, truth blames the
+bank line -- but the *second* settlement genuinely has no credit carrying its
+UTR, and saying so is correct behaviour. Scoring it as a false alarm would
+punish a pipeline for being thorough. Four such flags on this dataset; all four
+trace to a genuinely broken neighbour.
+
+---
+
+## Baseline: T1 alone, profile `default`, seed 42
+
+| metric | value |
+|---|---|
+| settlement -> bank matching | 81.8% (18/22) |
+| order -> gateway verification | 100.0% (508/508) |
+| **false matches** | **0** |
+| **false alarms** | **0** |
+| exceptions detected | 69/89 |
+| ...classified | 45 |
+| ...flagged but unnamed | 28 |
+| ...undetected | 20 |
+
+Fully classified at T1: E01, E02, E03, E06, E11. Detected but deliberately
+unnamed: E04, E05, E08, E09, E10. Invisible to T1 and reported as such: E07
+(needs cross-cycle lookback), E12 (needs narration semantics).
+
+Recorded before T2 exists, so the improvement T2 delivers is measurable rather
+than asserted.
+
+---
+
+## Failures, day 2
+
+### F5. Ground truth would have punished a correct pipeline
+
+**What broke.** Before writing a line of the matcher, working through how E06
+would be scored: the injector labelled a *sample* of unsettled entries (10 of
+28). A pipeline that correctly found all 28 would have been charged with 18
+false alarms.
+
+**Diagnosis.** E06 and E07 are not injected faults, they are *observations* --
+being unsettled, or being a refund that settled later than its payment, is a
+fact about the data. Sampling an observation leaves identical records
+half-labelled, and the answer key becomes wrong rather than incomplete.
+
+**Fix.** Both now label the entire population. E06 went from 10 to 28, E07 from
+8 to 17.
+
+**Why it mattered.** This is the subtlest failure so far: nothing crashed, no
+test failed, and the pipeline would have looked worse than it was. Ground truth
+is code and it needs the same suspicion as everything else.
+
+### F6. The pipeline had to import from the generator
+
+**What broke.** `pipeline/tier1.py` needed the fee engine to recompute fees, and
+the fee engine lived in `generate/fees.py`. The reconciler was importing from
+the thing that fabricated its input.
+
+**Diagnosis.** Wrong home from the start. An MDR slab and the GST rate are
+domain facts, not generation concerns -- the README already claimed the pipeline
+recomputes fees "with these same functions", which only reads as a strength if
+they live somewhere neutral.
+
+**Fix.** `git mv` to `domain/fees.py`, imports rewired, 26 tests still green.
+Two minutes on day 2; it would have been an ugly untangle in week two.

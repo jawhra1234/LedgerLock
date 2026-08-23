@@ -3,7 +3,7 @@ from decimal import Decimal
 import pytest
 
 from ledgerlock.domain.money import apply_rate, fmt, rupees
-from ledgerlock.generate import fees
+from ledgerlock.domain import fees
 
 
 def test_rupees_to_paise():

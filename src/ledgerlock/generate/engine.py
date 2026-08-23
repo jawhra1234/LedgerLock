@@ -25,7 +25,7 @@ from ..domain.models import (
 )
 from ..domain.money import Paise, rupees
 from ..domain.taxonomy import EXCEPTION_META, ExceptionCode
-from . import fees
+from ..domain import fees
 from .params import ScenarioSpec
 
 BANK_CODE = "HDFC"

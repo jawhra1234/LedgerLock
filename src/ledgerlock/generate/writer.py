@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from .. import config
 from ..domain.taxonomy import EXCEPTION_META, ExceptionCode
 from .engine import World
+from .params import RATE_BASIS
 
 RAW_FILES = {
     "orders": "orders.csv",
@@ -62,6 +63,10 @@ def _manifest(w: World, counts: dict[str, int]) -> dict:
             "label": meta.label,
             "resolvability": meta.resolvability.value,
             "expected_tier": meta.expected_tier.value,
+            # Recorded so a reader can see which population each rate was
+            # measured against, not just how many landed.
+            "rate": w.spec.rates.get(code, 0.0),
+            "basis": RATE_BASIS[code].value,
             "injected": n,
         }
     spec = w.spec

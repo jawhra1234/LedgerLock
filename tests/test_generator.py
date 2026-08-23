@@ -13,7 +13,7 @@ import pytest
 from ledgerlock.domain.models import EntryType
 from ledgerlock.domain.taxonomy import ExceptionCode
 from ledgerlock.generate.engine import build
-from ledgerlock.generate.params import PROFILES
+from ledgerlock.generate.params import MAX_UTR_PATH_BROKEN, PROFILES
 from ledgerlock.generate.writer import write_world
 from ledgerlock.io.loaders import TruthLeak, load_sources, load_truth
 
@@ -225,3 +225,44 @@ def test_csv_round_trip_preserves_every_field(tmp_path):
     # Blank cells must come back as None/0, never as the string "".
     assert all(e.order_id is None or e.order_id for e in src.entries)
     assert all(isinstance(e.net, int) for e in src.entries)
+
+
+# ---------------------------------------------------------------------------
+# rate calibration
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("profile", ["smoke", "default", "scale"])
+def test_bank_faults_stay_plausible_at_every_scale(profile):
+    """Bank-level faults must scale with payouts, not with order count.
+
+    Injection rates were originally all per-order. On the 5,000-order profile
+    that put a corrupted or merged UTR on 56% of settlements -- a bank that
+    mangles most of a merchant's payouts is a fiction, and a matcher scored
+    against fiction proves nothing. See F7 in DECISIONS.md.
+    """
+    w = build(PROFILES[profile])
+    n = len(w.settlements)
+    assert n > 0
+    broken_path = sum(
+        1 for x in w.exceptions
+        if x.code in (ExceptionCode.UTR_CORRUPTED, ExceptionCode.MERGED_SETTLEMENT)
+    )
+    share = broken_path / n
+    assert share <= MAX_UTR_PATH_BROKEN, (
+        f"{profile}: {broken_path}/{n} settlements ({share:.0%}) have a broken "
+        f"UTR path, over the {MAX_UTR_PATH_BROKEN:.0%} ceiling"
+    )
+
+
+def test_bank_fault_counts_do_not_track_order_count():
+    """Ten times the orders must not mean ten times the clumsy narrations."""
+    small = build(PROFILES["default"])
+    large = build(PROFILES["scale"])
+
+    def utr_faults(w):
+        return sum(1 for x in w.exceptions
+                   if x.code is ExceptionCode.UTR_CORRUPTED)
+
+    assert large.spec.n_orders == 10 * small.spec.n_orders
+    # Payouts grow with business days, so faults grow modestly -- never 10x.
+    assert utr_faults(large) < 5 * max(1, utr_faults(small))

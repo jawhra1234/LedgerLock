@@ -136,7 +136,7 @@ pytest -q
 
 | profile | orders | days | purpose |
 |---|---|---|---|
-| `smoke` | 50 | 14 | the stated bar; still exercises all twelve codes |
+| `smoke` | 50 | 28 | the stated bar; still exercises all twelve codes |
 | `default` | 500 | 30 | the headline number |
 | `scale` | 5,000 | 90 | throughput evidence — generates in ~2s |
 
@@ -147,22 +147,31 @@ clean clone.
 
 ## Results: T1 alone
 
-Profile `default`, seed 42. 1,125 source records, 89 injected exceptions.
+Profile `default`, seed 42. 1,125 source records, 86 injected exceptions.
 
 | metric | value |
 |---|---|
-| settlement -> bank matching | **81.8%** (18/22) |
+| settlement -> bank matching | **90.5%** (19/21) |
 | order -> gateway verification | **100.0%** (508/508) |
 | **false matches asserted** | **0** |
 | **false alarms on clean records** | **0** |
-| exceptions detected | 69/89 |
-| ...correctly classified | 45 |
-| ...flagged but honestly unnamed | 28 |
+| exceptions detected | 66/86 |
+| ...correctly classified | 44 |
+| ...flagged but honestly unnamed | 24 |
 | ...undetected | 20 |
 
 Two numbers, never blended. `order_entry` is 508 links where the gateway hands
-over the join key in a column; averaging it in would report 99.2% and hide an
-18-point shortfall on the part that is actually hard. See D7 in `DECISIONS.md`.
+over the join key in a column; averaging it in would report 99.6% and hide a
+9-point shortfall on the part that is actually hard. See D7 in `DECISIONS.md`.
+
+The same tier, unchanged, across all three profiles -- so the result is a
+property of the matcher rather than of one convenient dataset:
+
+| profile | records | settlement -> bank | false matches |
+|---|---|---|---|
+| `smoke` | 189 | 83.3% (15/18) | 0 |
+| `default` | 1,125 | 90.5% (19/21) | 0 |
+| `scale` | 10,441 | 89.4% (59/66) | 0 |
 
 What T1 does and does not close:
 
@@ -174,8 +183,9 @@ What T1 does and does not close:
 - **Invisible to T1, reported as undetected:** E07 cross-cycle refunds (needs
   lookback), E12 unexplained adjustments (needs narration semantics).
 
-The 4 missed `settlement_bank` links are exactly the 2 mangled UTRs (E08) and
-the 2 second-halves of merged credits (E10). Nothing else leaks.
+The 2 missed `settlement_bank` links are exactly the mangled UTR (E08) and the
+second half of the merged credit (E10). Nothing else leaks -- so the tier
+boundary is drawn where the taxonomy says it should be.
 
 ## AI judgment: where the model is *not* used
 

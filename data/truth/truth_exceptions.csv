@@ -81,10 +81,7 @@ entry,ENT_000499,E07,full,reverses ENT_000332 settled 2026-06-24 in an earlier c
 entry,ENT_000483,E07,full,reverses ENT_000108 settled 2026-06-10 in an earlier cycle
 entry,ENT_000479,E07,full,reverses ENT_000274 settled 2026-06-22 in an earlier cycle
 bank_line,LINE_000011,E08,full,true UTR HDFCN26061700011 appears as 'HDFCN26061700'
-bank_line,LINE_000002,E08,full,true UTR HDFCN26060400002 appears as 'HDFCN26060400'
 bank_line,LINE_000029,E10,full,one credit covers STL_0013 and STL_0014
-bank_line,LINE_000030,E10,full,one credit covers STL_0018 and STL_0019
-settlement,STL_0017,E11,full,"payout arrived as 2 credits: ['LINE_000031', 'LINE_000032']"
-settlement,STL_0007,E11,full,"payout arrived as 2 credits: ['LINE_000033', 'LINE_000034']"
-bank_line,LINE_000035,E09,full,"direct customer transfer from NORTHSTAR LABS PVT LTD, not a gateway payout"
-bank_line,LINE_000036,E09,full,"direct customer transfer from S KUMAR, not a gateway payout"
+settlement,STL_0017,E11,full,"payout arrived as 2 credits: ['LINE_000030', 'LINE_000031']"
+bank_line,LINE_000032,E09,full,"direct customer transfer from NORTHSTAR LABS PVT LTD, not a gateway payout"
+bank_line,LINE_000033,E09,full,"direct customer transfer from S KUMAR, not a gateway payout"

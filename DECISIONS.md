@@ -193,14 +193,17 @@ trace to a genuinely broken neighbour.
 
 | metric | value |
 |---|---|
-| settlement -> bank matching | 81.8% (18/22) |
+| settlement -> bank matching | 90.5% (19/21) |
 | order -> gateway verification | 100.0% (508/508) |
 | **false matches** | **0** |
 | **false alarms** | **0** |
-| exceptions detected | 69/89 |
-| ...classified | 45 |
-| ...flagged but unnamed | 28 |
+| exceptions detected | 66/86 |
+| ...classified | 44 |
+| ...flagged but unnamed | 24 |
 | ...undetected | 20 |
+
+Holds across scales with the tier unchanged: `smoke` 83.3% (15/18), `default`
+90.5% (19/21), `scale` 89.4% (59/66), zero false matches at every size.
 
 Fully classified at T1: E01, E02, E03, E06, E11. Detected but deliberately
 unnamed: E04, E05, E08, E09, E10. Invisible to T1 and reported as such: E07
@@ -208,6 +211,13 @@ unnamed: E04, E05, E08, E09, E10. Invisible to T1 and reported as such: E07
 
 Recorded before T2 exists, so the improvement T2 delivers is measurable rather
 than asserted.
+
+> **Note on a moved number.** An earlier version of this table read 81.8%
+> (18/22). Nothing about T1 changed; the *dataset* did, when F7 recalibrated
+> bank-fault rates. The number moved because a miscalibrated dataset was
+> injecting twice as many broken UTR paths as a real bank produces. Recorded
+> here rather than quietly overwritten, because a baseline that silently
+> improves is worthless as a baseline.
 
 ---
 
@@ -245,3 +255,48 @@ they live somewhere neutral.
 
 **Fix.** `git mv` to `domain/fees.py`, imports rewired, 26 tests still green.
 Two minutes on day 2; it would have been an ugly untangle in week two.
+
+### F7. Bank faults scaled with order count, so the scale profile was fiction
+
+**What broke.** Verifying the pushed repo from a clean clone, the three profiles
+disagreed badly on the one metric that matters:
+
+```
+smoke    (50 orders)     settlement -> bank   71.4%
+default  (500 orders)    settlement -> bank   81.8%
+scale    (5,000 orders)  settlement -> bank   53.9%
+```
+
+T1 does not get worse with volume, so the data was wrong.
+
+**Diagnosis.** Every injection rate was expressed per *order*. But E08 (mangled
+UTR), E09, E10 (merged credit) and E11 (split credit) are **payout-level**
+faults, and payouts scale with business days, not with order count. At 5,000
+orders that produced 20 corrupted UTRs and 15 merged credits across just 63
+settlements -- **56% of payouts with a broken UTR path**. A bank that mangles
+more than half a merchant's payouts is not a bank. T1 was being scored against
+fiction, and the 35 missed links were exactly 20 + 15.
+
+**Fix.** Added an explicit `Basis` to each code: order-level rates stay
+per-order, payout-level rates are measured against settlement count. Then
+widened the `smoke` window from 14 to 28 days, because with only 6 payouts the
+">=1 occurrence of every code" floor put a bank fault on a third of them by
+construction -- coverage and realism were in direct conflict at that size.
+
+After: broken UTR path is 12% / 10% / 11% across smoke / default / scale, and
+the profiles finally agree -- 83.3%, 90.5%, 89.4%, zero false matches at every
+size.
+
+**Why it mattered.** Two ways this would have cost me. The scale profile is the
+throughput evidence, and it was carrying a match rate that read as a failing
+grade for reasons unrelated to the matcher. Worse, it would have *flattered* T2:
+subset-sum would have had 15 merged pairs to recover instead of a realistic
+2-3, so T2's improvement would have looked far larger than it deserved.
+
+Two tests now pin it: `test_bank_faults_stay_plausible_at_every_scale` fails the
+build above a 15% ceiling, and `test_bank_fault_counts_do_not_track_order_count`
+asserts that ten times the orders does not mean ten times the clumsy narrations.
+
+**The real lesson.** I only found this because I re-ran all three profiles from
+a clean clone instead of trusting the one profile I had been developing against.
+The bug was invisible at `default` and only screamed at 10x.

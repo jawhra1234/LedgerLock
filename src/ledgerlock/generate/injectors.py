@@ -409,5 +409,6 @@ PIPELINE = [
 
 
 def inject_all(w: World) -> None:
+    n_settlements = len(w.settlements)
     for code, fn in PIPELINE:
-        fn(w, w.spec.count_for(code))
+        fn(w, w.spec.count_for(code, n_settlements))

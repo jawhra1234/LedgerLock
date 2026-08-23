@@ -1,0 +1,112 @@
+{
+  "profile": "default",
+  "seed": 42,
+  "reproduce": "python -m ledgerlock generate --profile default --seed 42",
+  "spec": {
+    "n_orders": 500,
+    "n_days": 30,
+    "refund_rate": 0.06,
+    "chargeback_rate": 0.008,
+    "order_fail_rate": 0.07
+  },
+  "config": {
+    "mdr_rates": {
+      "card": "0.0200",
+      "netbanking": "0.0190",
+      "wallet": "0.0200",
+      "upi": "0.0000"
+    },
+    "gst_rate": "0.18",
+    "tds_rate": "0.001",
+    "chargeback_fee_paise": 150000,
+    "refund_returns_mdr": false,
+    "rolling_reserve_pct": "0.05",
+    "reserve_release_days": 7,
+    "settlement_cycle_days": 2,
+    "rounding_tolerance_paise": 50,
+    "world_start": "2026-06-01"
+  },
+  "counts": {
+    "orders": 500,
+    "pg_entries": 595,
+    "bank_lines": 30,
+    "truth_links": 1077,
+    "truth_exceptions": 62
+  },
+  "settlements": 20,
+  "clean_identity_verified": true,
+  "exceptions_by_code": {
+    "E01": {
+      "label": "Duplicate payment",
+      "resolvability": "partial",
+      "expected_tier": "t2_rules",
+      "injected": 5
+    },
+    "E02": {
+      "label": "Missing in gateway",
+      "resolvability": "full",
+      "expected_tier": "t1_deterministic",
+      "injected": 6
+    },
+    "E03": {
+      "label": "Orphan gateway entry",
+      "resolvability": "full",
+      "expected_tier": "t1_deterministic",
+      "injected": 4
+    },
+    "E04": {
+      "label": "Fee rounding drift",
+      "resolvability": "full",
+      "expected_tier": "t2_rules",
+      "injected": 15
+    },
+    "E05": {
+      "label": "Material amount mismatch",
+      "resolvability": "none",
+      "expected_tier": "t2_rules",
+      "injected": 3
+    },
+    "E06": {
+      "label": "Unsettled at cut-off",
+      "resolvability": "full",
+      "expected_tier": "t2_rules",
+      "injected": 10
+    },
+    "E07": {
+      "label": "Cross-cycle refund",
+      "resolvability": "full",
+      "expected_tier": "t2_rules",
+      "injected": 8
+    },
+    "E08": {
+      "label": "Corrupted UTR in narration",
+      "resolvability": "full",
+      "expected_tier": "t3_llm",
+      "injected": 2
+    },
+    "E09": {
+      "label": "Non-gateway inflow",
+      "resolvability": "full",
+      "expected_tier": "t2_rules",
+      "injected": 2
+    },
+    "E10": {
+      "label": "Merged settlement credit",
+      "resolvability": "full",
+      "expected_tier": "t2_rules",
+      "injected": 2
+    },
+    "E11": {
+      "label": "Split settlement credit",
+      "resolvability": "full",
+      "expected_tier": "t2_rules",
+      "injected": 2
+    },
+    "E12": {
+      "label": "Unexplained adjustment",
+      "resolvability": "none",
+      "expected_tier": "t3_llm",
+      "injected": 3
+    }
+  }
+}

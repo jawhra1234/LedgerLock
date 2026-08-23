@@ -60,3 +60,22 @@ DATE_WINDOW_DAYS = 4                # how far a settlement may drift from T+2
 # hardcoded answer: a real controller is told what its processor's credits look
 # like. A credit without this marker is somebody else's money.
 PG_NARRATION_MARKERS = ("RAZORPAY",)
+
+# --- Tier 2 policy ---------------------------------------------------------
+# Confidence and action are separated. A rule states how strong its evidence
+# is; this threshold decides whether that is enough to close a case without
+# review. Overriding it always: a code whose resolvability is not FULL never
+# auto-resolves, at any confidence.
+AUTO_RESOLVE_MIN_CONFIDENCE = 0.90
+
+# Bounds on the subset-sum search. Given a free hand it will always find you
+# an answer -- some subset of enough numbers sums to almost anything -- so the
+# search is capped, requires exact equality, and refuses to choose between two
+# subsets that both work. Truncation is logged, never silent.
+SUBSET_SUM_MAX_CANDIDATES = 12
+SUBSET_SUM_MAX_SUBSET = 3
+
+# The remitter name the gateway pays out under, as it appears on the bank
+# statement. A real deployment configures this; it is what lets the reconciler
+# tell "a credit we could not explain" from "a credit that was never ours".
+GATEWAY_REMITTER = "RAZORPAY SOFTWARE PVT LTD"

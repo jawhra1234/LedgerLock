@@ -28,10 +28,12 @@ class Action(StrEnum):
     auto-resolved is a claim the pipeline is confident enough to post without
     review, so eval holds it to a much harsher standard.
     """
-    AUTO_RESOLVED = "auto_resolved"   # handled; no human needed
+    AUTO_RESOLVED = "auto_resolved"   # a named exception, closed without review
     ESCALATED = "escalated"           # a human must decide
     DEFERRED = "deferred"             # not an error; revisit next cycle
     OUT_OF_SCOPE = "out_of_scope"     # real, but not gateway money
+    EXPLAINED = "explained"           # no action: fully accounted for by other
+                                      # findings already raised
 
 
 class ProposedLink(BaseModel):
@@ -68,6 +70,13 @@ class Finding(BaseModel):
     confidence: float = 1.0
     detail: str = ""
     amount_delta: int | None = None      # paise, where a break has a size
+    # Subject keys ("settlement:STL_0007") this finding explains on another
+    # record, so the controller can drop the earlier unnamed flag instead of
+    # reporting one cause twice.
+    supersedes: tuple[str, ...] = ()
+
+    def subject_key(self) -> str:
+        return f"{self.subject_type}:{self.subject_id}"
 
     def subject(self) -> tuple[str, str]:
         return (self.subject_type, self.subject_id)
@@ -92,8 +101,13 @@ class ReconResult(BaseModel):
 
     @property
     def unclassified(self) -> list[Finding]:
-        """The honest residue: flagged, but the pipeline cannot name it."""
-        return [f for f in self.findings if f.code is None]
+        """The honest residue: flagged, unnamed, and still open.
+
+        An EXPLAINED finding is unnamed but not open -- the gap is accounted
+        for by other findings -- so it is not residue.
+        """
+        return [f for f in self.findings
+                if f.code is None and f.action is Action.ESCALATED]
 
     @property
     def escalated(self) -> list[Finding]:

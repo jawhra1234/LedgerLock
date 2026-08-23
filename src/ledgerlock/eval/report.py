@@ -29,6 +29,29 @@ def _pct(x: float) -> str:
     return f"{x * 100:.1f}%"
 
 
+def _tier_surprises(score: Score) -> list[str]:
+    """Codes resolved at a different tier than the taxonomy predicted.
+
+    Worth printing rather than quietly enjoying: a code resolved *earlier* than
+    expected means a cheaper mechanism turned out to be sufficient, which is
+    the useful kind of surprise. It is also how the model tier's remit shrank.
+    """
+    order = {"t1": 1, "t2": 2, "t3": 3}
+    out: list[str] = []
+    for cs in score.codes:
+        if not cs.resolved_at:
+            continue
+        actual = min(cs.resolved_at, key=lambda t: order.get(t, 9))
+        expected = EXCEPTION_META[cs.code].expected_tier.value.split("_")[0]
+        if order.get(actual, 9) < order.get(expected, 9):
+            out.append(f"[green]{cs.code.value}[/] resolved at {actual}, "
+                       f"expected {expected} -- a cheaper mechanism sufficed")
+        elif order.get(actual, 9) > order.get(expected, 9):
+            out.append(f"[yellow]{cs.code.value}[/] resolved at {actual}, "
+                       f"expected {expected}")
+    return out
+
+
 def _residue_groups(score: Score) -> list[tuple[str, int, int]]:
     """(rule, count, total absolute amount) for everything left unnamed."""
     agg: dict[str, list[int]] = {}
@@ -98,6 +121,12 @@ def render_console(score: Score, console) -> None:
                   str(cs.injected), str(cs.detected), str(cs.coded),
                   str(cs.unclassified), missed)
     console.print(x)
+
+    moved = _tier_surprises(score)
+    if moved:
+        console.print("[bold]tier vs expectation[/]")
+        for line in moved:
+            console.print(f"  {line}")
 
     if score.residue:
         r = Table(title="honest exception list -- flagged, not yet explained",
@@ -194,6 +223,14 @@ def to_markdown(score: Score) -> str:
         a("|---|---|---|")
         for rule, n, amount in _residue_groups(score):
             a(f"| `{rule}` | {n} | {fmt(amount)} |")
+        a("")
+    moved = _tier_surprises(score)
+    if moved:
+        a("## Tier vs expectation")
+        a("")
+        for line in moved:
+            a("- " + line.replace("[green]", "**").replace("[yellow]", "**")
+                        .replace("[/]", "**"))
         a("")
     undetected = [cs for cs in score.codes if cs.missed]
     if undetected:

@@ -25,12 +25,18 @@ from ledgerlock.pipeline.views import Index
 
 @pytest.fixture(scope="module")
 def scored(tmp_path_factory):
-    """Generate, reconcile and score one world end to end."""
+    """Generate, reconcile with T1 ONLY, and score, end to end.
+
+    Pinned to `upto=Tier.T1` on purpose. Every assertion in this file is a
+    claim about the deterministic tier in isolation, and the published T1
+    baseline has to stay provable for the rest of the project's life -- if this
+    fixture silently picked up later tiers, the arc would stop being evidence.
+    """
     root = tmp_path_factory.mktemp("world")
     world = build(replace(PROFILES["default"], seed=42))
     manifest = write_world(world, root)
     src = load_sources(root / "raw")
-    result = reconcile_sources(src)
+    result = reconcile_sources(src, upto=Tier.T1)
     return score(result, load_truth(root / "truth"), src, manifest), result, src
 
 
@@ -219,6 +225,7 @@ def test_smoke_profile_also_reconciles_without_false_matches(tmp_path):
     world = build(replace(PROFILES["smoke"], seed=7))
     manifest = write_world(world, tmp_path)
     src = load_sources(tmp_path / "raw")
-    s = score(reconcile_sources(src), load_truth(tmp_path / "truth"), src, manifest)
+    s = score(reconcile_sources(src, upto=Tier.T1),
+              load_truth(tmp_path / "truth"), src, manifest)
     assert s.total_fp == 0
     assert s.false_alarms == []

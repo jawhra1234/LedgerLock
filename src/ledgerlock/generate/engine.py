@@ -394,6 +394,20 @@ def _build_links(w: World) -> None:
                                  line_id=st.line_id))
 
 
+def _verify_signs(w: World) -> None:
+    """Post-injection sanity: money still points the right way.
+
+    A credit column cannot hold a negative number and a gateway cannot pay out
+    a negative amount. Both were possible while injectors could bump a batch
+    below zero, and the failure was invisible on large profiles.
+    """
+    for b in w.bank_lines:
+        assert b.credit >= 0, f"{b.line_id} has a negative credit: {b.credit}"
+        assert b.debit >= 0, f"{b.line_id} has a negative debit: {b.debit}"
+    for st in w.settlements.values():
+        assert st.payout > 0, f"{st.settlement_id} pays out {st.payout}"
+
+
 def _recompute_balances(w: World) -> None:
     """Run after injection, so injected lines carry a coherent balance column."""
     w.bank_lines.sort(key=lambda b: (b.value_date, b.line_id))
@@ -417,6 +431,7 @@ def build(spec: ScenarioSpec) -> World:
     _verify_identity(w)      # clean world proven before anything is broken
     _build_links(w)
     inject_all(w)
+    _verify_signs(w)         # injection must not invert any sign
     _recompute_balances(w)
     w.entries.sort(key=lambda e: (e.created_at, e.entry_id))
     return w

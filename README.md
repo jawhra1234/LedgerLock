@@ -9,9 +9,10 @@ LedgerLock closes that loop three ways — **ERP orders ↔ gateway ledger ↔ b
 statement** — reports its match rate against a known answer key, and hands back
 an exception list it does not pretend to have solved.
 
-> Status: **T1 + scoring harness complete.** The synthetic world, the twelve-code
-> taxonomy, the deterministic tier and the eval harness all run. T2 (rules,
-> tolerances, subset-sum) and T3 (model-assisted residue) are next.
+> Status: **T1 + T2 + scoring harness complete.** 100% settlement-to-bank
+> matching with zero false matches at every dataset size, 83 of 86 exceptions
+> classified, and the 3 it cannot touch reported as undetected. T3
+> (model-assisted) is scoped to what T2 genuinely leaves behind.
 
 ---
 
@@ -129,7 +130,8 @@ pip install -e .
 python -m ledgerlock taxonomy                      # the codes, and what they mean
 python -m ledgerlock generate --profile default --seed 42
 python -m ledgerlock inspect                       # read the sources back
-python -m ledgerlock run                           # reconcile -> data/out/recon.json
+python -m ledgerlock run --upto t1                 # deterministic tier only
+python -m ledgerlock run --upto t2                 # + rules, tolerances, search
 python -m ledgerlock eval                          # score  -> data/out/report.md
 pytest -q
 ```
@@ -145,69 +147,96 @@ Same profile + same seed produces a **byte-identical** dataset
 `manifest.json` that carries its seed, so any number here is reproducible from a
 clean clone.
 
-## Results: T1 alone
+## Results
 
 Profile `default`, seed 42. 1,125 source records, 86 injected exceptions.
+Each tier measured separately on the same dataset via `run --upto t1|t2`, so the
+contribution of each is evidence rather than a claim.
 
-| metric | value |
-|---|---|
-| settlement -> bank matching | **90.5%** (19/21) |
-| order -> gateway verification | **100.0%** (508/508) |
-| **false matches asserted** | **0** |
-| **false alarms on clean records** | **0** |
-| exceptions detected | 66/86 |
-| ...correctly classified | 44 |
-| ...flagged but honestly unnamed | 24 |
-| ...undetected | 20 |
+| metric | T1 | T2 |
+|---|---|---|
+| settlement -> bank matching | 90.5% (19/21) | **100.0%** (21/21) |
+| order -> gateway verification | 100.0% (508/508) | **100.0%** (508/508) |
+| **false matches asserted** | **0** | **0** |
+| **false alarms on clean records** | **0** | **0** |
+| exceptions classified | 44/86 | **83/86** |
+| unnamed residue | 24 | **0** |
+| undetected | 20 | **3** (E12 only) |
 
 Two numbers, never blended. `order_entry` is 508 links where the gateway hands
-over the join key in a column; averaging it in would report 99.6% and hide a
-9-point shortfall on the part that is actually hard. See D7 in `DECISIONS.md`.
+over the join key in a column; averaging it in would report ~99% and hide the
+part that is actually hard. See D7 in `DECISIONS.md`.
 
-The same tier, unchanged, across all three profiles -- so the result is a
-property of the matcher rather than of one convenient dataset:
+The same pipeline, unchanged, at three sizes -- so the result is a property of
+the matcher, not of one convenient dataset:
 
-| profile | records | settlement -> bank | false matches |
-|---|---|---|---|
-| `smoke` | 189 | 83.3% (15/18) | 0 |
-| `default` | 1,125 | 90.5% (19/21) | 0 |
-| `scale` | 10,441 | 89.4% (59/66) | 0 |
+| profile | records | T1 | T2 | false matches |
+|---|---|---|---|---|
+| `smoke` | 189 | 88.9% | **100%** | 0 |
+| `default` | 1,125 | 90.5% | **100%** | 0 |
+| `scale` | 10,441 | 89.4% | **100%** | 0 |
 
-What T1 does and does not close:
+### What is still open, and should be
 
-- **Classified:** E01 duplicates, E02 missing in gateway, E03 orphans,
-  E06 unsettled, E11 split settlements.
-- **Detected, deliberately unnamed:** E04, E05, E08, E09, E10 -- 28 findings
-  reported with their evidence and their rupee size, but no code guessed.
-  Naming them needs a tolerance or a search, and T1 has neither by definition.
-- **Invisible to T1, reported as undetected:** E07 cross-cycle refunds (needs
-  lookback), E12 unexplained adjustments (needs narration semantics).
+18 cases escalated to a human, and 3 nobody can close:
 
-The 2 missed `settlement_bank` links are exactly the mangled UTR (E08) and the
-second half of the merged credit (E10). Nothing else leaks -- so the tier
-boundary is drawn where the taxonomy says it should be.
+- **5 duplicate payments** -- resolvability `partial`. Whether to refund a
+  second charge is a business decision, not a matcher's.
+- **6 missing in gateway**, **4 orphan entries** -- real breaks needing a person.
+- **3 material mismatches** -- resolvability `none`. Classified perfectly by T2,
+  and every one still escalated. Classification and resolution are different
+  verbs.
+- **3 unexplained adjustments** -- no order link, opaque narration. Reported as
+  undetected rather than omitted.
+
+A pipeline reporting nothing open on this dataset would be lying, and
+`test_open_cases_are_exactly_the_ones_that_should_be` fails the build if that
+ever happens.
+
+### Tier vs expectation
+
+The taxonomy predicted which tier should resolve each code. Four beat it:
+
+```
+E01 resolved at t1, expected t2 -- a cheaper mechanism sufficed
+E06 resolved at t1, expected t2
+E08 resolved at t2, expected t3
+E11 resolved at t1, expected t2
+```
+
+E08 is the interesting one, and it shrank the model tier -- see below.
 
 ## AI judgment: where the model is *not* used
 
-Stage 1 contains **no model calls at all**. Generating synthetic finance data
-with an LLM would produce amounts that do not sum, fees that do not follow a
-slab, and a ground truth nobody could trust. It is a job for a fee engine and a
-seeded PRNG.
+**Nothing in T1 or T2 makes a model call.** 83 of 86 exceptions and 100% of the
+settlement-to-bank matching are closed by a fee engine, exact joins, named
+tolerances and a bounded search.
 
-The plan for the tiers follows the same reasoning:
+Generating the data with an LLM would have produced amounts that do not sum and
+a ground truth nobody could trust. Matching with one would have produced
+confident wrong links, the most expensive output available in finance.
 
-- **T1 — deterministic.** Exact joins on `payment_id`, `order_id`, UTR. No model.
-- **T2 — rules and search.** Tolerance bands, date windows, subset-sum over
-  candidate settlements. No model. This is arithmetic; a model would be slower,
-  costlier and less correct.
-- **T3 — model-assisted, on the residue only.** Corrupted narrations (E08) and
-  classifying opaque adjustments (E12): genuine natural-language problems.
-  Output is a *suggestion with a confidence score and cited evidence*, never an
-  auto-posted match. Below threshold it goes to the exception queue.
+### The model tier shrank because of a rule I wrote instead
 
-An LLM-proposed match is a suggestion pending review. In reconciliation a wrong
-match is worse than no match, so the reported headline metric is not just match
-rate — it is match rate **and false-match rate**.
+The taxonomy predicted **E08 (corrupted UTR) needs T3** -- a mangled string
+looks like a job for fuzzy or semantic matching. That was wrong.
+`HDFCN26O6O3OOOOI` is a bad string to match, but the payout is an exact integer
+and the value date sits inside a known window. **Exact amount equality is far
+stronger evidence than any edit-distance guess**, so R11 matches on amount and
+date, requires a *unique* candidate, and escalates when two payouts of the same
+size could both fit.
+
+So T3's remit is now:
+
+- **E12** unexplained adjustments -- genuinely narration semantics, 3 of 86 cases
+- **Ambiguous R11 cases** -- two same-sized payouts in one window, where amount
+  cannot discriminate and narration is the only tiebreak
+
+That is where a model earns its place, and nowhere else. **3 of 86 exceptions**,
+on records a deterministic pipeline has already proved it cannot resolve. An
+LLM-proposed match will be a suggestion with a confidence and cited evidence,
+never an auto-posted link -- and the harness already counts an auto-resolved
+unresolvable case as a failure.
 
 ## What is built
 
@@ -215,12 +244,13 @@ rate — it is match rate **and false-match rate**.
 - [x] Generator with pre-injection identity proof
 - [x] Twelve injectors, one corruption dimension each
 - [x] Relational ground truth + reproducibility manifest
-- [x] Truth-leak guard, CLI, 54 tests
+- [x] Truth-leak guard, CLI, 98 tests
 - [x] T1 deterministic tier -- threshold-free by definition
 - [x] Eval harness: precision, recall, false-match rate, false-alarm and
-      correctly-refused accounting, markdown report
-- [ ] T2 rules: tolerance bands, cross-cycle lookback, subset-sum
-- [ ] T3 model-assisted residue (E08 narrations, E12 classification)
+      correctly-refused accounting, per-tier arc, markdown report
+- [x] T2: tolerance bands, cross-cycle lookback, amount+date recovery,
+      bounded subset-sum, out-of-scope classification, batch-gap attribution
+- [ ] T3 model-assisted residue -- E12 classification and ambiguous candidates
 - [ ] Exception queue view
 
 See `DECISIONS.md` for what broke on the way here.

@@ -117,12 +117,19 @@ def taxonomy() -> None:
 def run(
     raw: Path = typer.Option(DATA / "raw"),
     out: Path = typer.Option(DATA / "out"),
+    upto: str = typer.Option("t2", help="highest tier to run: t1 or t2"),
 ) -> None:
     """Reconcile the sources and write the result artifact."""
     from .pipeline.controller import reconcile_sources
+    from .pipeline.result import Tier
+
+    try:
+        ceiling = Tier(upto.lower())
+    except ValueError:
+        raise typer.BadParameter(f"unknown tier {upto!r}; use t1 or t2")
 
     src = load_sources(raw)
-    result = reconcile_sources(src)
+    result = reconcile_sources(src, upto=ceiling)
     out.mkdir(parents=True, exist_ok=True)
     (out / "recon.json").write_text(
         result.model_dump_json(indent=2), encoding="utf-8")
@@ -136,6 +143,8 @@ def run(
     t.add_row("findings raised", f"{len(result.findings):,}")
     t.add_row("...escalated to a human", f"{len(result.escalated):,}")
     t.add_row("...unnamed (honest residue)", f"{len(result.unclassified):,}")
+    auto = sum(1 for f in result.findings if f.action.value == "auto_resolved")
+    t.add_row("...auto-resolved", f"{auto:,}")
     console.print(t)
 
     by_rule: dict[str, int] = {}

@@ -77,6 +77,18 @@ def _bump_bank(w: World, settlement_id: str, delta: Paise) -> None:
         row.net -= delta          # the summary row is the mirror of the payout
 
 
+def _payout_after(w: World, settlement_id: str | None, delta: Paise) -> Paise:
+    """What a settlement's payout would become after a bump.
+
+    Injectors that take money *out* of a batch have to respect the same rule
+    the clean world respects: a gateway never pays out a negative amount, it
+    carries the deficit forward. Without this guard, removing a large payment
+    from a thin batch produced a bank line with a negative credit -- see F8.
+    """
+    st = w.settlements.get(settlement_id or "")
+    return st.payout + delta if st else 0
+
+
 def _settled_payments(w: World) -> list[PGEntry]:
     return [e for e in w.entries
             if e.entry_type is EntryType.PAYMENT and e.settlement_id]
@@ -117,7 +129,10 @@ def e02_missing_in_pg(w: World, n: int) -> None:
             order_counts[e.order_id] = order_counts.get(e.order_id, 0) + 1
     # Only touch orders with a single gateway entry, so deleting it cannot
     # orphan a refund or chargeback and blur the exception.
-    pool = [e for e in _settled_payments(w) if order_counts.get(e.order_id or "") == 1]
+    pool = [e for e in _settled_payments(w)
+            if order_counts.get(e.order_id or "") == 1
+            # Removing this payment must not drive its batch's payout negative.
+            and _payout_after(w, e.settlement_id, -e.net) > 0]
     for e in _pick(w, pool, n, lambda x: (x.entry_id, x.order_id or "")):
         _bump_bank(w, e.settlement_id or "", -e.net)
         w.entries.remove(e)
@@ -166,6 +181,8 @@ def e12_unexplained_adjustment(w: World, n: int) -> None:
         st = w.rng.choice(settled)
         amount = rupees(w.rng.randint(500, 25_000))
         signed = amount if w.rng.random() < 0.4 else -amount
+        if signed < 0 and _payout_after(w, st.settlement_id, signed) <= 0:
+            signed = amount          # no headroom in this batch to take from
         e = PGEntry(
             entry_id=w.nid("ENT"), entry_type=EntryType.ADJUSTMENT,
             gross=amount, net=signed,

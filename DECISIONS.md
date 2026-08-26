@@ -730,3 +730,45 @@ reasons. The product code was already correct -- every read and write in
 fired. Without it the edit would have half-applied and I would have pushed a
 README with one correction in and one silently dropped. The Windows CI job now
 guards the property permanently.
+
+### F14. The first CI run ever attempted failed in 40 seconds
+
+**What broke.** Every job in the first CI run went red. Four test jobs failed at
+collection; the reproducibility job got through `generate` and died on the next
+step.
+
+**Diagnosis.** `httpx` and `python-dotenv` were **imported but never declared**
+in `pyproject.toml`. The pattern of failures said so precisely before I read a
+single log line: `generate` imports neither and passed, `run` does
+`from dotenv import load_dotenv` and failed, and all four test jobs died
+collecting `test_tier3.py`, which imports `httpx` at module level.
+
+Job logs need repo admin auth via the API, so I could not read them. Diagnosing
+it from the *shape* of the failures turned out to be faster anyway.
+
+**Why it was invisible.** Every run until now used the Anaconda environment on
+this laptop, which already had both packages. `pip install -e .` in a clean venv
+would have failed for anyone -- including a judge following the README's own
+first instruction.
+
+**Fix.** Declared both, with a comment on each explaining why it is there. Then
+proved it the way it should have been proved the first time: a fresh `venv`, a
+copy of the tree, `pip install -e ".[dev]"`, and the full CI sequence. 143 tests
+pass and all three profiles reconcile with only the declared dependencies
+present.
+
+**The regression test.** `test_every_third_party_import_is_a_declared_dependency`
+walks the AST of every module in `src/`, resolves each third-party import to its
+distribution, and asserts it appears in `pyproject.toml`. Verified non-vacuous by
+deleting the `httpx` line and watching it fail:
+
+```
+E       assert not {"httpx (provides: ['httpx'])"}
+```
+
+**Why it mattered, beyond the fix.** This is the exact thing CI was added for,
+and it found it on the first attempt. Four bugs in this project were invisible
+because I only ever ran the profile I was developing against; this one was
+invisible because I only ever ran in the environment I was developing in. Same
+mistake, one axis over. The lesson generalises past "run all three profiles" to
+**never let the only witness be the machine that wrote the code.**

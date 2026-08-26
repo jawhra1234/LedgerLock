@@ -41,7 +41,7 @@ matcher, not of one convenient dataset:
 | `default` | 1,126 | 86 | 90.5% | 100% | 100% | 85/86 | **0** | 2.7% |
 | `scale` | 10,450 | 797 | 89.4% | 100% | 100% | 794/797 | **0** | 0.7% |
 
-**Zero false matches at every size and every tier.** 143 tests. Every figure
+**Zero false matches at every size and every tier.** 144 tests. Every figure
 above reproduces from a clean clone **with no API key**.
 
 ### Two numbers, never blended
@@ -361,7 +361,7 @@ analysis in F10 of `DECISIONS.md`.
 
 Three layers, each doing something the others cannot.
 
-**`pytest` — 143 tests.** Proves the parts behave: the generator is
+**`pytest` — 144 tests.** Proves the parts behave: the generator is
 deterministic, injection is surgical, subset-sum refuses ambiguity, T3 emits no
 links, the committed cache covers every profile.
 
@@ -410,9 +410,14 @@ failures, each with the number attached. The three worth reading:
 - **F12** — the committed model cache was complete for `default` and **stale for
   the other two profiles**, and passed silently for days because `cached` mode
   treats a miss as normal. Would have shipped. Now guarded and regression-tested.
+- **F14** — the very first CI run failed in 40 seconds: `httpx` and
+  `python-dotenv` were imported but never declared, so `pip install -e .` in a
+  clean venv was broken for everyone but me. Exactly what CI was added to catch.
 
-The through-line: four separate bugs were invisible on the profile I was
-developing against. Every measurement now runs all three profiles, every time.
+The through-line: four bugs were invisible because I only ran the profile I was
+developing against, and one because I only ran in the environment I was
+developing in. Same mistake, one axis over. Every measurement now runs all three
+profiles, and CI runs on a machine that is not mine.
 
 ---
 
@@ -428,7 +433,7 @@ src/ledgerlock/
   llm/                   adapter, gemini provider, offline provider, prompts
   eval/                  metrics, report
   queueview.py           the exception queue
-tests/                   143 tests across 7 files
+tests/                   144 tests across 7 files
 data/raw/                the three sources
 data/truth/              the answer key + reproducibility manifest
 data/llm_cache/          committed model responses — no key needed to reproduce

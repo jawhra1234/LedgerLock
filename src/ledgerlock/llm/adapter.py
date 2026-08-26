@@ -121,7 +121,7 @@ class LLMClient:
         self._path(key).write_text(
             json.dumps({"prompt": prompt, "model": model, "answer": answer},
                        indent=2, sort_keys=True),
-            encoding="utf-8")
+            encoding="utf-8", newline="\n")
 
     # -- the one entry point ----------------------------------------------
     def ask(self, prompt: str, schema: dict) -> dict | None:

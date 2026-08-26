@@ -772,3 +772,41 @@ because I only ever ran the profile I was developing against; this one was
 invisible because I only ever ran in the environment I was developing in. Same
 mistake, one axis over. The lesson generalises past "run all three profiles" to
 **never let the only witness be the machine that wrote the code.**
+
+### F15. "Byte-identical" was true on Windows and false on Linux
+
+**What broke.** Second CI run: the reproducibility job and the Windows test job
+both went green, and all three Ubuntu test jobs failed. Windows passing while
+Linux failed pointed straight at a platform difference in my own claim rather
+than at a config problem.
+
+**Diagnosis.** Three facts that only matter together:
+
+* `.gitattributes` said `* text=auto`, so git stored the committed CSVs as **LF**
+  and converted on checkout.
+* Python's `csv.writer` emits **CRLF** by default, whatever the platform.
+* `committed_dataset_matches()` compares with `read_bytes()`.
+
+On a Windows checkout the files come back CRLF and match the generator. On Linux
+they come back LF and cannot. So `test_the_committed_dataset_is_what_the_generator_produces`
+was a test that could only ever pass on the machine that wrote the data.
+
+The CI step `git diff --exit-code -- data/` passed throughout, because git
+compares *normalised* content -- which is why nothing noticed until a byte
+comparison ran on Linux.
+
+**Fix, at the cause rather than the test.** Every generated artefact now writes
+LF explicitly -- `csv.writer(lineterminator="
+")`, and `newline="
+"` on the
+manifest and on every cache entry -- and `.gitattributes` marks the data files
+`-text` so git never rewrites them in either direction. The bytes in the
+repository are now exactly the bytes the generator produces, on every platform.
+Verified by comparing each committed git object against its file on disk.
+
+**Why it mattered.** The single most load-bearing sentence in the README is that
+these numbers reproduce from a clean clone. It was quietly platform-specific,
+and I had "verified" it perhaps a dozen times -- always on Windows. Two CI runs
+found two different versions of the same mistake: **the only witness was the
+machine that wrote the code.** That is now three failures (F12, F14, F15) with
+the same shape, and it is the thing I would most want to be asked about.

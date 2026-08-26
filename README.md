@@ -413,6 +413,10 @@ failures, each with the number attached. The three worth reading:
 - **F14** — the very first CI run failed in 40 seconds: `httpx` and
   `python-dotenv` were imported but never declared, so `pip install -e .` in a
   clean venv was broken for everyone but me. Exactly what CI was added to catch.
+- **F15** — the second run showed "byte-identical" was true on Windows and false
+  on Linux: git stored the CSVs as LF while `csv.writer` emitted CRLF. The most
+  load-bearing sentence in this README was quietly platform-specific, and I had
+  "verified" it a dozen times — always on the same machine.
 
 The through-line: four bugs were invisible because I only ran the profile I was
 developing against, and one because I only ran in the environment I was

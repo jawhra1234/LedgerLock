@@ -1,1 +1,15 @@
+# Source and docs: normalise to LF in the repository.
 * text=auto
+
+# Generated artefacts are compared byte-for-byte against a fresh `generate`
+# and against a committed model cache, so git must never rewrite their line
+# endings on checkout. Marking them binary keeps the bytes in the repo exactly
+# equal to the bytes the generator produces, on every platform.
+#
+# Without this, `* text=auto` stored the CSVs as LF while csv.writer emitted
+# CRLF, so "byte-identical" was true on Windows and false on Linux -- which is
+# how CI caught it. See F15 in DECISIONS.md.
+data/raw/*.csv       -text
+data/truth/*.csv     -text
+data/truth/*.json    -text
+data/llm_cache/*.json -text

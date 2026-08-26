@@ -47,7 +47,11 @@ def _write_csv(path: Path, rows: list[BaseModel]) -> int:
         return 0
     cols = list(type(rows[0]).model_fields)
     with path.open("w", newline="", encoding="utf-8") as fh:
-        wr = csv.writer(fh)
+        # LF explicitly, not the csv module's default CRLF. These files are
+        # committed and compared byte-for-byte, so a platform-dependent line
+        # ending makes the reproducibility claim true only on the machine that
+        # generated them -- which is exactly what happened. See F15.
+        wr = csv.writer(fh, lineterminator="\n")
         wr.writerow(cols)
         for r in rows:
             wr.writerow([_cell(getattr(r, c)) for c in cols])
@@ -118,5 +122,6 @@ def write_world(w: World, root: Path) -> dict:
     }
     manifest = _manifest(w, counts)
     (truth / "manifest.json").write_text(
-        json.dumps(manifest, indent=2, default=str), encoding="utf-8")
+        json.dumps(manifest, indent=2, default=str), encoding="utf-8",
+        newline="\n")
     return manifest

@@ -1,5 +1,7 @@
 # LedgerLock
 
+[![ci](https://github.com/jawhra1234/LedgerLock/actions/workflows/ci.yml/badge.svg)](https://github.com/jawhra1234/LedgerLock/actions/workflows/ci.yml)
+
 **An AI finance controller that closes the settlement reconciliation loop for a
 payment-gateway merchant — and reports its own failures.**
 
@@ -39,7 +41,7 @@ matcher, not of one convenient dataset:
 | `default` | 1,126 | 86 | 90.5% | 100% | 100% | 85/86 | **0** | 2.7% |
 | `scale` | 10,450 | 797 | 89.4% | 100% | 100% | 794/797 | **0** | 0.7% |
 
-**Zero false matches at every size and every tier.** 136 tests. Every figure
+**Zero false matches at every size and every tier.** 143 tests. Every figure
 above reproduces from a clean clone **with no API key**.
 
 ### Two numbers, never blended
@@ -62,6 +64,7 @@ python -m ledgerlock generate --profile default --seed 42   # build the world
 python -m ledgerlock run --upto t3                          # reconcile
 python -m ledgerlock eval                                   # score it
 python -m ledgerlock queue                                  # the exception queue
+python -m ledgerlock verify --profile all                   # assert every claim below
 pytest -q
 ```
 
@@ -80,6 +83,7 @@ python -m ledgerlock run --upto t3           # + model-assisted residue
 python -m ledgerlock run --upto t3 --llm off # skip the model entirely
 python -m ledgerlock eval                    # -> data/out/report.md
 python -m ledgerlock queue                   # -> data/out/queue.md
+python -m ledgerlock verify --profile all|smoke|default|scale
 ```
 
 To regenerate the model responses yourself: `cp .env.example .env`, add a
@@ -353,6 +357,44 @@ analysis in F10 of `DECISIONS.md`.
 
 ---
 
+## How these claims are checked
+
+Three layers, each doing something the others cannot.
+
+**`pytest` — 143 tests.** Proves the parts behave: the generator is
+deterministic, injection is surgical, subset-sum refuses ambiguity, T3 emits no
+links, the committed cache covers every profile.
+
+**`ledgerlock verify` — proves the *claims*.** The test suite never checked that
+the sentences on this page were still true of the current checkout. This does,
+per profile, exiting non-zero if one fails:
+
+```
+PASS  committed dataset matches the generator      profile default seed 42; byte-identical
+PASS  no false matches asserted                    0 wrong links out of 5019 asserted
+PASS  settlement -> bank fully matched             66/66 recovered
+PASS  order -> gateway fully verified              4953/4953, precision 100%
+PASS  no unresolvable case was auto-resolved       0 closed that must stay open
+PASS  nothing left flagged-but-unnamed             0 findings with no code
+PASS  model cache covers this dataset              0 prompts unanswered, 81 from cache
+PASS  no live model call was needed                0 calls made
+INFO  some exceptions correctly remain open        3 false alarms, 3 undetected, 794/797
+```
+
+That last row is deliberately **informational, not asserted**. A critical check
+demanding zero false alarms would be a standing invitation to tune the data until
+it passed.
+
+**CI — proves it on someone else's machine.** Tests across Python 3.11–3.13 on
+Linux plus a Windows job, then a separate job that regenerates the committed
+dataset and reconciles all three profiles end to end. The workflow references no
+secrets and has a step that *fails if an API key is present*, because keyless
+reproduction is a property being tested rather than assumed. The Windows job runs
+with `PYTHONUTF8=0` to force legacy `cp1252` and catch any file I/O missing an
+explicit encoding.
+
+---
+
 ## What broke
 
 `DECISIONS.md` is a running log written as it happened — 18 decisions and 12
@@ -386,7 +428,7 @@ src/ledgerlock/
   llm/                   adapter, gemini provider, offline provider, prompts
   eval/                  metrics, report
   queueview.py           the exception queue
-tests/                   136 tests across 6 files
+tests/                   143 tests across 7 files
 data/raw/                the three sources
 data/truth/              the answer key + reproducibility manifest
 data/llm_cache/          committed model responses — no key needed to reproduce
@@ -407,5 +449,7 @@ data/llm_cache/          committed model responses — no key needed to reproduc
       correctly-refused accounting, per-tier arc, markdown report
 - [x] Exception queue in plain English
 - [x] Cache-completeness guard with a regression test over all three profiles
+- [x] `ledgerlock verify` — asserts every published guarantee; CI on Linux
+      (3.11–3.13) and Windows, keyless, with a no-API-key assertion
 - [ ] v2 taxonomy: a third narration class for "pointer, not a reason" (F10)
 - [ ] Settlement Q&A over the attribution data R15 already computes

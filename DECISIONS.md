@@ -658,3 +658,75 @@ Not fixed before freeze, deliberately: changing the generator changes the data,
 which changes every prompt, which invalidates the committed cache and costs
 another full live regeneration. A cosmetic fix is not worth putting the
 reproducibility artefact through that this close to a deadline. Logged instead.
+
+---
+
+## Day 4 (later): CI, and a command that checks the claims
+
+### D19. CI exists to verify the claim, not to run the tests
+
+**Decision.** GitHub Actions on every push: tests on Linux across Python
+3.11/3.12/3.13, plus one Windows job, plus a separate `reproducibility` job that
+regenerates the committed dataset and reconciles all three profiles end to end.
+No `secrets:` are referenced anywhere in the workflow.
+
+**Why.** The tests passing is the least interesting thing CI proves. The claim
+this project actually makes is *"every number reproduces from a clean clone with
+no API key"* -- and until this ran, that had only ever been checked on the
+Windows laptop that wrote it. A green run is the difference between an assertion
+and third-party verification.
+
+Three details worth the extra lines:
+
+* **A step that fails if `GEMINI_API_KEY` is set.** Keyless is a property being
+  tested, so it is asserted rather than assumed.
+* **`PYTHONUTF8=0`.** On the Windows job this forces the legacy `cp1252`
+  default, which would expose any file read or write missing an explicit
+  encoding. Verified locally first -- 143 tests pass under `cp1252`, so the
+  codebase is genuinely encoding-safe rather than accidentally so.
+* **The reproducibility job needs no new assertions.** `run --llm cached`
+  already exits non-zero on an unanswered prompt (F12), so three CLI
+  invocations *are* the cache-completeness check. The guard built last night
+  turned out to be the CI test.
+
+### D20. `ledgerlock verify` checks the claims; `pytest` checks the parts
+
+**Decision.** A command asserting the guarantees the README makes in print --
+zero false matches, settlement-to-bank fully matched, no unresolvable case
+auto-resolved, nothing left unnamed, cache complete, no live call needed --
+across every profile, exiting non-zero if one fails.
+
+**Why.** The test suite proves components behave. It did not prove the sentences
+in the README were still true of the current checkout, and those sentences are
+what a reader is actually trusting. If a guarantee breaks, the failure message
+says the right thing: *"a sentence in the README is now false -- fix the code or
+fix the sentence."*
+
+It also closed a real gap. Every existing test generates into a tmpdir, so
+**nothing checked that the CSVs committed to the repo were what the generator
+produces.** A hand-edited source file or a forgotten regeneration would have
+left every published number describing data no longer in the repo.
+`test_a_tampered_source_file_is_caught` changes one field in one row and asserts
+the check notices.
+
+One deliberate omission: **false alarms are reported, never asserted.** `default`
+has 2 and `scale` has 3, from the model disagreeing with borderline narration
+labels (F10). A critical check demanding zero would be a standing invitation to
+tune the data until it passed, so that row is marked informational and prints
+the number instead.
+
+### F13. `read_text()` defaulted to cp1252 and an edit silently did nothing
+
+While rewriting the README, a scripted edit asserted its target string was
+present and the assertion failed -- on text that was visibly there.
+`pathlib.Path.read_text()` with no `encoding` uses the platform default, which
+on this machine is `cp1252`, so the UTF-8 em-dashes came back as mojibake and no
+UTF-8 literal could match them.
+
+Cheap to fix (`encoding='utf-8'` everywhere) and worth recording for two
+reasons. The product code was already correct -- every read and write in
+`src/` passes an explicit encoding, which is why 143 tests pass under
+`PYTHONUTF8=0`. And the failure mode was benign only by luck: the `assert`
+fired. Without it the edit would have half-applied and I would have pushed a
+README with one correction in and one silently dropped. The Windows CI job now
+guards the property permanently.

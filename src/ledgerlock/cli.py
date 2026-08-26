@@ -251,6 +251,23 @@ def queue(
     console.print(f"-> {path}")
 
 
+@app.command("verify")
+def verify_cmd(
+    profile: str = typer.Option("all", help="smoke | default | scale | all"),
+    seed: int = typer.Option(42),
+) -> None:
+    """Assert every guarantee this project makes, and exit non-zero if one fails."""
+    from .generate.params import PROFILES
+    from .verify import run_verification
+
+    names = list(PROFILES) if profile == "all" else [profile]
+    for n in names:
+        if n not in PROFILES:
+            raise typer.BadParameter(f"unknown profile {n!r}")
+    if not run_verification(names, seed, console):
+        raise typer.Exit(1)
+
+
 def main() -> None:
     app()
 

@@ -1,0 +1,110 @@
+name: ci
+
+# The point of this workflow is not that the tests pass -- it is that they pass
+# on a machine that is not mine, with no API key, no warm cache and no .env.
+#
+# Every headline number in the README claims to reproduce from a clean clone
+# without a Gemini key. Until this ran, that claim had only ever been checked
+# on the Windows laptop that wrote it. A green run here is the difference
+# between an assertion and third-party verification.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# No `secrets` are referenced anywhere in this file, deliberately. The model
+# tier must never need a key to reproduce the published results.
+env:
+  PYTHONUTF8: "0"        # do not paper over encoding bugs; see F13
+
+jobs:
+  tests:
+    name: tests (${{ matrix.os }}, py${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python: ["3.11", "3.12", "3.13"]
+        include:
+          # Development happens on Windows and CI on Linux, so each catches
+          # what the other cannot -- line endings, default text encoding, and
+          # path separators have all bitten this project at least once.
+          - os: windows-latest
+            python: "3.13"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      - name: install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: assert the environment holds no API key
+        shell: python
+        run: |
+          import os, sys
+          leaked = [k for k in ("GEMINI_API_KEY", "LEDGERLOCK_LLM_MODEL")
+                    if os.getenv(k)]
+          if leaked:
+              sys.exit(f"CI must run keyless; found {leaked}")
+          print("no model credentials present -- as intended")
+
+      - name: tests
+        run: pytest -q
+
+  reproducibility:
+    name: reproduces from a clean clone, keyless
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: committed dataset must match a fresh generate
+        run: |
+          python -m ledgerlock generate --profile default --seed 42
+          git diff --exit-code -- data/raw data/truth
+
+      # `run --llm cached` exits non-zero if a single prompt is unanswered, so
+      # these three invocations ARE the cache-completeness assertion. A stale
+      # cache once shipped-ready here (F12); it cannot pass quietly again.
+      - name: every profile reconciles end to end with no key
+        run: |
+          for profile in smoke default scale; do
+            echo "::group::$profile"
+            python -m ledgerlock generate --profile "$profile" --seed 42
+            for tier in t1 t2 t3; do
+              python -m ledgerlock run --upto "$tier" --llm cached
+              python -m ledgerlock eval
+            done
+            python -m ledgerlock queue
+            echo "::endgroup::"
+          done
+
+      - name: no false matches, and the unresolvable cases stayed unresolved
+        run: python -m ledgerlock verify --profile all --seed 42
+
+      - name: upload the reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ledgerlock-reports
+          path: data/out/
+          if-no-files-found: warn

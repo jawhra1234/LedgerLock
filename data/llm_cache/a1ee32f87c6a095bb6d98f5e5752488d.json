@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "These 30 transactions were escalated because the payment gateway amounts do not match the recorded ERP order values, exceeding our allowed tolerance for discrepancies.",
+    "next_step": "Manually review each transaction to identify the source of the order-value gap and adjust the ERP records accordingly."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write a note for a finance team's reconciliation queue.\n\n30 item(s) in this cycle share one cause. Explain in ONE sentence what\nhappened, in plain English, for a reader who does not know the system. Then give\none short next step. Do not invent numbers or causes beyond the facts below.\n\nException type: Material amount mismatch\nWhat it means: Discrepancy beyond tolerance. There is no safe automatic answer; this is a genuine escalation.\nAutomated handling: escalated\nTotal amount involved: Rs 62,453.00\nExample evidence: gateway gross differs from the ERP order value by -Rs 386.00; order-value gaps are never absorbed\n"
+}

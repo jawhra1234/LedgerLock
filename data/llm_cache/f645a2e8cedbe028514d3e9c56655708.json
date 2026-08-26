@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "The entry ENT_000510 contains an unexplained adjustment of Rs 3,370.00 because the narration only references an internal support ticket rather than providing a valid accounting reason.",
+    "next_step": "Retrieve the details from support ticket 4471 to determine the nature of the adjustment and update the entry with a proper business justification."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write one line for a finance team's reconciliation queue.\n\nExplain in plain English what is wrong with this specific record and what to do\nabout it. One sentence each. Use only the facts given; do not invent a cause.\n\nRecord: entry:ENT_000510\nException: Unexplained adjustment\nAmount involved: Rs 3,370.00\nMachine evidence: narration 'CR ADJ - see support ticket 4471' names no bookable reason (model read it as 'internal reference', cited 'see support ticket 4471')\n"
+}

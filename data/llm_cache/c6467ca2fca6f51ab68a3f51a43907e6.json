@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "A payment was processed through the gateway for an order that does not exist in our accounting system.",
+    "next_step": "Verify the order status in the gateway and manually create the missing record in the ERP."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write a note for a finance team's reconciliation queue.\n\n1 item(s) in this cycle share one cause. Explain in ONE sentence what\nhappened, in plain English, for a reader who does not know the system. Then give\none short next step. Do not invent numbers or causes beyond the facts below.\n\nException type: Orphan gateway entry\nWhat it means: Gateway entry references an order_id absent from the ERP.\nAutomated handling: escalated\nTotal amount involved: Rs 4,002.21\nExample evidence: cites ORD_TEST_42600, absent from the ERP\n"
+}

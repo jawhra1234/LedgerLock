@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "The gateway entry ENT_000118 for Rs 4,002.21 is currently orphaned because the referenced order ORD_TEST_42600 does not exist in the ERP system.",
+    "next_step": "Verify if order ORD_TEST_42600 was created in the ERP and manually link it to the gateway entry or investigate why the record is missing."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write one line for a finance team's reconciliation queue.\n\nExplain in plain English what is wrong with this specific record and what to do\nabout it. One sentence each. Use only the facts given; do not invent a cause.\n\nRecord: entry:ENT_000118\nException: Orphan gateway entry\nAmount involved: Rs 4,002.21\nMachine evidence: cites ORD_TEST_42600, absent from the ERP\n"
+}

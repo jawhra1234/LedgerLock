@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "These fifteen items were automatically resolved because the fee discrepancies were minor rounding differences that fell within our acceptable tolerance levels.",
+    "next_step": "Mark these items as absorbed in the final reconciliation report."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write a note for a finance team's reconciliation queue.\n\n15 item(s) in this cycle share one cause. Explain in ONE sentence what\nhappened, in plain English, for a reader who does not know the system. Then give\none short next step. Do not invent numbers or causes beyond the facts below.\n\nException type: Fee rounding drift\nWhat it means: Fee differs by under the rounding tolerance; absorbable, but must be reported as absorbed rather than silently dropped.\nAutomated handling: auto_resolved\nTotal amount involved: Rs 3.07\nExample evidence: fee differs by Rs 0.01, inside the Rs 0.50 tolerance; absorbed and reported, not dropped\n"
+}

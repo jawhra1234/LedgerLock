@@ -88,6 +88,11 @@ class ReconResult(BaseModel):
     links: list[ProposedLink] = []
     findings: list[Finding] = []
     tiers_run: list[Tier] = []
+    # Plain-English notes for the exception queue, keyed by subject key or
+    # "code:E12". Presentation only -- eval does not score these, because a
+    # readable sentence is not a match.
+    explanations: dict[str, str] = {}
+    llm: dict = {}                       # provider, mode, call counts
     n_orders: int = 0
     n_entries: int = 0
     n_bank_lines: int = 0

@@ -79,3 +79,32 @@ SUBSET_SUM_MAX_SUBSET = 3
 # statement. A real deployment configures this; it is what lets the reconciler
 # tell "a credit we could not explain" from "a credit that was never ours".
 GATEWAY_REMITTER = "RAZORPAY SOFTWARE PVT LTD"
+
+# --- Tier 3: the model boundary -------------------------------------------
+# A chain, not a model. Probing a free key showed three Flash tiers failing in
+# three different ways inside one minute (503 saturated, 503 saturated, 429
+# throttled), so a pipeline that names one model is a pipeline that dies when
+# that model is busy. Explicit versions, never a floating "-latest" alias: the
+# committed cache has to be regenerable against the same weights months later.
+LLM_MODEL_CHAIN = (
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-3.1-flash-lite-preview",
+)
+LLM_MAX_CALLS_PER_RUN = 200
+LLM_RETRIES_PER_MODEL = 3
+LLM_TIMEOUT_SECONDS = 60
+
+# Below this, a model's answer is recorded as a suggestion and nothing is
+# claimed from it. T3 never proposes a link at any confidence -- see tier3.
+T3_MIN_CONFIDENCE = 0.70
+
+# How many individual exceptions the queue explains one-by-one. Group-level
+# explanations are generated per exception code, so the call count stays flat
+# as the dataset grows instead of scaling with it.
+QUEUE_TOP_N = 10
+
+# Committed on purpose: the cached responses are what let `eval` reproduce the
+# published numbers on a clean clone with no API key.
+from pathlib import Path as _Path
+LLM_CACHE_DIR = _Path("data/llm_cache")

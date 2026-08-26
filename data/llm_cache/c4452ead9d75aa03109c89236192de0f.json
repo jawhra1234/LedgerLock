@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "Entry ENT_000595 is a duplicate of the transaction recorded under ORD_000386, as both payments were captured within 38 seconds of each other for the same amount.",
+    "next_step": "Reverse the duplicate payment entry ENT_000595 to correct the account balance."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write one line for a finance team's reconciliation queue.\n\nExplain in plain English what is wrong with this specific record and what to do\nabout it. One sentence each. Use only the facts given; do not invent a cause.\n\nRecord: entry:ENT_000595\nException: Duplicate payment\nAmount involved: Rs 34,813.00\nMachine evidence: identical capture on ORD_000386 38s after ENT_000150\n"
+}

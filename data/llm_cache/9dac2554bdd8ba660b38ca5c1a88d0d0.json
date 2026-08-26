@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "These nine transactions were flagged because they contain internal reference codes rather than clear business justifications, making it impossible to link them to specific orders.",
+    "next_step": "Review support ticket 4471 to identify the underlying reason for these adjustments."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write a note for a finance team's reconciliation queue.\n\n9 item(s) in this cycle share one cause. Explain in ONE sentence what\nhappened, in plain English, for a reader who does not know the system. Then give\none short next step. Do not invent numbers or causes beyond the facts below.\n\nException type: Unexplained adjustment\nWhat it means: Adjustment with no order linkage and an opaque narration. An LLM may classify its likely nature; nothing can legitimately match it.\nAutomated handling: escalated\nTotal amount involved: Rs 95,420.00\nExample evidence: narration 'CR ADJ - see support ticket 4471' names no bookable reason (model read it as 'internal reference', cited 'see support ticket 4471')\n"
+}

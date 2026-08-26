@@ -1,72 +1,182 @@
 # LedgerLock
 
-**A settlement reconciliation controller for a payment-gateway merchant.**
+**An AI finance controller that closes the settlement reconciliation loop for a
+payment-gateway merchant — and reports its own failures.**
 
-A merchant receives one lump credit in their bank account. It is net of MDR,
-GST on that MDR, refunds, chargebacks, TDS under s.194-O and a rolling reserve.
+A merchant gets one lump credit in their bank account. It is net of MDR, GST on
+that MDR, refunds, chargebacks, TDS under s.194-O and a rolling reserve.
 Somewhere inside that single number are a few hundred individual orders.
-LedgerLock closes that loop three ways — **ERP orders ↔ gateway ledger ↔ bank
-statement** — reports its match rate against a known answer key, and hands back
-an exception list it does not pretend to have solved.
 
-> Status: **T1 + T2 + scoring harness complete.** 100% settlement-to-bank
-> matching with zero false matches at every dataset size, 83 of 86 exceptions
-> classified, and the 3 it cannot touch reported as undetected. T3
-> (model-assisted) is scoped to what T2 genuinely leaves behind.
+LedgerLock reconciles that three ways — **ERP orders ↔ gateway ledger ↔ bank
+statement** — scores itself against an answer key written before the matcher
+existed, and hands back an exception list it does not pretend to have solved.
+
+---
+
+## Results
+
+Profile `default`, seed 42: **1,126 source records, 86 injected exceptions.**
+Each tier is measured separately on the same dataset (`run --upto t1|t2|t3`), so
+the contribution of each is evidence rather than a claim.
+
+| metric | T1 deterministic | T2 rules + search | T3 model-assisted |
+|---|---|---|---|
+| **settlement → bank matching** | 90.5% (19/21) | **100%** (21/21) | **100%** (21/21) |
+| order → gateway verification | 100% (508/508) | 100% | 100% |
+| **false matches asserted** | **0** | **0** | **0** |
+| exceptions classified | 44/86 | 83/86 | **85/86** |
+| flagged but unnamed | 24 | 0 | 0 |
+| undetected | 20 | 3 | **1** |
+| false alarms on clean records | 0 | 0 | 2 |
+| records touching a model | 0% | 0% | **2.7%** |
+
+The same pipeline, unchanged, at three sizes — so the result is a property of the
+matcher, not of one convenient dataset:
+
+| profile | records | exceptions | T1 | T2 | T3 | classified | false matches | model-touched |
+|---|---|---|---|---|---|---|---|---|
+| `smoke` | 191 | 18 | 88.9% | 100% | 100% | 18/18 | **0** | 13.1% |
+| `default` | 1,126 | 86 | 90.5% | 100% | 100% | 85/86 | **0** | 2.7% |
+| `scale` | 10,450 | 797 | 89.4% | 100% | 100% | 794/797 | **0** | 0.7% |
+
+**Zero false matches at every size and every tier.** 136 tests. Every figure
+above reproduces from a clean clone **with no API key**.
+
+### Two numbers, never blended
+
+An earlier version of this report printed a single combined match rate of
+**99.2%**. Arithmetically correct, and misleading: 508 of the 529 scored links
+are `order_entry`, where the gateway report hands over the join key in a column.
+The real reconciliation — payout to bank credit, through a UTR buried in a
+narration the bank may mangle, merge or split — scored **90.5%**. Blending them
+buried a 9-point shortfall under an easy population. See D7 in `DECISIONS.md`.
+
+---
+
+## Quickstart
+
+```bash
+pip install -e .
+
+python -m ledgerlock generate --profile default --seed 42   # build the world
+python -m ledgerlock run --upto t3                          # reconcile
+python -m ledgerlock eval                                   # score it
+python -m ledgerlock queue                                  # the exception queue
+pytest -q
+```
+
+No API key needed: the model's answers are committed under `data/llm_cache/`.
+
+<details>
+<summary>All commands</summary>
+
+```bash
+python -m ledgerlock taxonomy                # the 12 exception codes and what they mean
+python -m ledgerlock generate --profile smoke|default|scale --seed N
+python -m ledgerlock inspect                 # read the sources back, show cash position
+python -m ledgerlock run --upto t1           # deterministic tier only
+python -m ledgerlock run --upto t2           # + rules, tolerances, bounded search
+python -m ledgerlock run --upto t3           # + model-assisted residue
+python -m ledgerlock run --upto t3 --llm off # skip the model entirely
+python -m ledgerlock eval                    # -> data/out/report.md
+python -m ledgerlock queue                   # -> data/out/queue.md
+```
+
+To regenerate the model responses yourself: `cp .env.example .env`, add a
+Gemini key from [AI Studio](https://aistudio.google.com/apikey), then
+`run --upto t3 --llm live`.
+
+</details>
+
+| profile | orders | days | purpose |
+|---|---|---|---|
+| `smoke` | 50 | 28 | the stated 50-record bar; still exercises all twelve codes |
+| `default` | 500 | 30 | the headline numbers |
+| `scale` | 5,000 | 90 | throughput evidence — generates in ~5s |
+
+Same profile + same seed gives a **byte-identical** dataset
+(`test_same_seed_is_byte_identical`), and every published figure cites the
+`manifest.json` carrying its seed.
 
 ---
 
 ## Why this problem
 
-Three-way settlement reconciliation is arithmetic and search, not language. A
-bank credit of ₹4,87,213.50 decomposing into 143 payments, minus fees, minus
-two cross-cycle refunds, minus withheld tax is a subset-sum problem with a
-tolerance band. That makes it a good test of engineering judgment, because the
-tempting solution — hand the rows to a model and ask it to reconcile — is the
-wrong instrument, and it fails in the most expensive way available: confidently.
+Three-way settlement reconciliation is **arithmetic and search, not language**.
+A bank credit of ₹4,87,213.50 decomposing into 143 payments, minus fees, minus
+two cross-cycle refunds, minus withheld tax, is a subset-sum problem with a
+tolerance band.
 
-## Design
+That makes it a good test of engineering judgment, because the tempting
+solution — hand the rows to a model and ask it to reconcile — is the wrong
+instrument, and it fails in the most expensive way available: **confidently**.
+
+---
+
+## How it works
 
 ```
-data/raw/                          data/truth/
-  orders.csv          ERP            truth_links.csv        every true edge
-  pg_entries.csv      gateway        truth_exceptions.csv   every injected fault
-  bank_statement.csv  bank           manifest.json          seed + spec + counts
-        |                                      |
-        v                                      v
-   io.loaders.load_sources            io.loaders.load_truth
-        |                                      |
-        v                                      |
-   pipeline  T1 deterministic                  |
-             T2 rules / subset-sum             |
-             T3 model-assisted residue         |
-        |                                      |
-        +---------------> eval <---------------+
-                   precision, recall,
-                   false-match rate
+data/raw/                            data/truth/
+  orders.csv          ERP              truth_links.csv        every true edge
+  pg_entries.csv      gateway          truth_exceptions.csv   every injected fault
+  bank_statement.csv  bank             manifest.json          seed + spec + counts
+        |                                        |
+        v                                        v
+   io.loaders.load_sources              io.loaders.load_truth
+        |                                        |
+        v                                        |
+   pipeline   T1  deterministic — no thresholds  |
+              T2  rules, tolerances, subset-sum  |
+              T3  model-assisted, no links       |
+        |                                        |
+        +----------------> eval <----------------+
+                    match rate, false-match rate,
+                    false alarms, correctly-refused
 ```
 
 `load_sources` raises `TruthLeak` on any path containing a `truth` component.
-The pipeline package therefore *cannot* read the answer key — that guard is the
-mechanical reason the accuracy numbers below are worth reading.
+The pipeline package therefore **cannot** read the answer key — that guard is
+the mechanical reason these numbers are worth reading.
+
+### The three tiers
+
+Ordered by how much they can be trusted, not by how clever they are. Each
+tier's residue is the next tier's only input.
+
+**T1 — deterministic.** Defined by having *no thresholds*: existence checks,
+exact key equality, exact arithmetic. No tolerance, no date window, no fuzzy
+score, no model. A rule that has to decide "how close is close enough" is not a
+T1 rule. That has a real cost, taken deliberately — T1 detects fee drift and
+material mismatches but **refuses to name either**, because telling them apart
+is a question about magnitude.
+
+**T2 — rules and bounded search.** Where thresholds are allowed, and every one
+is named, lives in `config.py`, and is reported alongside the decision it drove.
+Splits rounding drift from material loss; recovers a mangled UTR by exact amount
+and date; recovers merged credits by subset-sum; pairs cross-cycle refunds;
+attributes a batch gap to the member breaks that caused it.
+
+**T3 — model-assisted.** Classifies opaque adjustment narrations, suggests
+candidates where amount alone cannot choose, and writes the plain-English
+exception queue.
 
 ### The generator: prove, then break
 
 1. Build a **perfectly reconciling** world.
 2. **Assert** the settlement identity on every batch:
-   `Σ(member entry nets) == payout == bank credit`.
-   If step 1 has a bug, generation fails loudly instead of quietly emitting
-   exceptions nobody intended.
+   `Σ(member entry nets) == payout == bank credit`. If step 1 has a bug,
+   generation fails loudly instead of quietly emitting exceptions nobody
+   intended.
 3. Apply **injectors**, each corrupting exactly one dimension — an amount, a
    link, or a narration — and each recording a ground-truth row.
 
-So every exception in the dataset is there on purpose, and the answer key was
-written before the matcher existed.
+So every exception is there on purpose, and the answer key predates the matcher.
+`World.claim()` stops two injectors touching one record, because a subject with
+two faults is a subject no evaluator can score.
 
 ### `entry_type` semantics
 
-The realism lives in the sign conventions. Each type behaves as the gateway
-actually behaves:
+The realism lives in the sign conventions:
 
 | type | behaviour |
 |---|---|
@@ -78,179 +188,224 @@ actually behaves:
 | `rolling_reserve_hold` / `_release` | 5% held, released 7 days later into a later payout |
 | `settlement` | the aggregate row carrying the UTR; `net = −payout` |
 
-Two behaviours are modelled rather than idealised away, because both break
-naive matchers:
+Two behaviours are modelled rather than idealised away, because both break naive
+matchers:
 
-- **Refunds keep the fee.** A full reversal costs the merchant more than the
-  sale earned. Any matcher assuming symmetry is wrong on every refund.
+- **Refunds keep the fee.** A full reversal costs the merchant more than the sale
+  earned. Any matcher assuming symmetry is wrong on every refund.
 - **Negative cycles carry forward.** When a day's refunds exceed its inflows the
   payout would be negative; gateways do not claw money back, the deficit rolls
-  into the next cycle. So a settlement batch is *not* always one T+2 bucket.
+  into the next cycle. So a settlement batch is **not** always one T+2 bucket.
 
-Money is an integer number of **paise** everywhere. `Decimal` appears only at
-the fee boundary, rounded once, half-up, the way Indian processors round. There
-are no floats in this project — a float would make the ±₹0.01 drift exceptions
+Money is an integer number of **paise** everywhere; `Decimal` appears only at the
+fee boundary, rounded once, half-up, the way Indian processors round. There are
+no floats in this project — a float would make the ±₹0.01 drift exceptions
 accidental rather than deliberate, and quietly invalidate every number here.
+
+---
 
 ## The exception taxonomy
 
 `resolvable` is the column that matters. A case marked **none** is one the
-pipeline is *supposed* to leave unresolved: correctly flagging it counts as a
-success, and "resolving" it counts as a false match. Without that distinction an
+pipeline is *supposed* to leave unresolved: correctly flagging it scores as a
+success, and "resolving" it scores as a failure. Without that distinction, an
 evaluator rewards a matcher for guessing.
 
-| code | exception | resolvable | expected tier |
+| code | exception | resolvable | resolved at |
 |---|---|---|---|
-| E01 | Duplicate payment | partial | T2 |
+| E01 | Duplicate payment | partial | T1 |
 | E02 | Missing in gateway | full | T1 |
 | E03 | Orphan gateway entry | full | T1 |
 | E04 | Fee rounding drift | full | T2 |
-| E05 | Material amount mismatch | **none** | T2 → escalate |
-| E06 | Unsettled at cut-off | full | T2 |
+| E05 | Material amount mismatch | **none** | T2 → escalated |
+| E06 | Unsettled at cut-off | full | T1 |
 | E07 | Cross-cycle refund | full | T2 |
-| E08 | Corrupted UTR in narration | full | **T3** |
+| E08 | Corrupted UTR in narration | full | T2 |
 | E09 | Non-gateway inflow | full | T2 |
 | E10 | Merged settlement credit | full | T2 (subset-sum) |
-| E11 | Split settlement credit | full | T2 (subset-sum) |
+| E11 | Split settlement credit | full | T1 |
 | E12 | Unexplained adjustment | **none** | T3 → classify only |
 
-E05 and E12 are the honest-failure anchors. A pipeline that reports 100% on this
-dataset has lied, and the eval harness is built to catch exactly that.
+E05 and E12 are the honest-failure anchors. **A pipeline reporting 100% on this
+dataset has lied**, and `test_open_cases_are_exactly_the_ones_that_should_be`
+fails the build if that ever happens.
 
 The dataset also carries **distractors that are not exceptions**: failed ERP
-orders with no gateway entry (normal), salary and vendor debits, GST challans.
-A matcher that flags those is crying wolf, and `test_failed_orders_are_noise_not_exceptions`
-pins it down.
-
-## Run it
-
-```bash
-pip install -e .
-
-python -m ledgerlock taxonomy                      # the codes, and what they mean
-python -m ledgerlock generate --profile default --seed 42
-python -m ledgerlock inspect                       # read the sources back
-python -m ledgerlock run --upto t1                 # deterministic tier only
-python -m ledgerlock run --upto t2                 # + rules, tolerances, search
-python -m ledgerlock eval                          # score  -> data/out/report.md
-pytest -q
-```
-
-| profile | orders | days | purpose |
-|---|---|---|---|
-| `smoke` | 50 | 28 | the stated bar; still exercises all twelve codes |
-| `default` | 500 | 30 | the headline number |
-| `scale` | 5,000 | 90 | throughput evidence — generates in ~2s |
-
-Same profile + same seed produces a **byte-identical** dataset
-(`test_same_seed_is_byte_identical`), and every published figure cites the
-`manifest.json` that carries its seed, so any number here is reproducible from a
-clean clone.
-
-## Results
-
-Profile `default`, seed 42. 1,125 source records, 86 injected exceptions.
-Each tier measured separately on the same dataset via `run --upto t1|t2`, so the
-contribution of each is evidence rather than a claim.
-
-| metric | T1 | T2 |
-|---|---|---|
-| settlement -> bank matching | 90.5% (19/21) | **100.0%** (21/21) |
-| order -> gateway verification | 100.0% (508/508) | **100.0%** (508/508) |
-| **false matches asserted** | **0** | **0** |
-| **false alarms on clean records** | **0** | **0** |
-| exceptions classified | 44/86 | **83/86** |
-| unnamed residue | 24 | **0** |
-| undetected | 20 | **3** (E12 only) |
-
-Two numbers, never blended. `order_entry` is 508 links where the gateway hands
-over the join key in a column; averaging it in would report ~99% and hide the
-part that is actually hard. See D7 in `DECISIONS.md`.
-
-The same pipeline, unchanged, at three sizes -- so the result is a property of
-the matcher, not of one convenient dataset:
-
-| profile | records | T1 | T2 | false matches |
-|---|---|---|---|---|
-| `smoke` | 189 | 88.9% | **100%** | 0 |
-| `default` | 1,125 | 90.5% | **100%** | 0 |
-| `scale` | 10,441 | 89.4% | **100%** | 0 |
+orders with no gateway entry (normal), salary and vendor debits, GST challans,
+and benign adjustments that explain themselves. A matcher that flags those is
+crying wolf.
 
 ### What is still open, and should be
 
-18 cases escalated to a human, and 3 nobody can close:
+22 cases escalated to a human, and 1 nobody could name:
 
-- **5 duplicate payments** -- resolvability `partial`. Whether to refund a
-  second charge is a business decision, not a matcher's.
-- **6 missing in gateway**, **4 orphan entries** -- real breaks needing a person.
-- **3 material mismatches** -- resolvability `none`. Classified perfectly by T2,
-  and every one still escalated. Classification and resolution are different
-  verbs.
-- **3 unexplained adjustments** -- no order link, opaque narration. Reported as
-  undetected rather than omitted.
+- **5 duplicate payments** — resolvability `partial`. Whether to refund a second
+  charge is a business decision, not a matcher's.
+- **6 missing in gateway**, **4 orphan entries** — real breaks needing a person.
+- **3 material mismatches** — resolvability `none`. Classified perfectly by T2,
+  and every one still escalated. **Classification and resolution are different
+  verbs.**
+- **4 unexplained adjustments** — no order link, opaque narration; every
+  one escalates. This is the honest one: **2 are correctly identified, 2 are
+  false alarms** on benign narrations, and a third injected case was missed
+  entirely. All three numbers are in the report; none was tuned away.
 
-A pipeline reporting nothing open on this dataset would be lying, and
-`test_open_cases_are_exactly_the_ones_that_should_be` fails the build if that
-ever happens.
+---
+
+## How accuracy is measured
+
+The harness makes three choices that each **lower** the headline number:
+
+1. **`entry_settlement` links are not scored.** The gateway report supplies that
+   column, so counting those 548 links would push the headline near 100% while
+   proving nothing. The exclusion is printed in every report.
+2. **A false match is counted separately from a miss**, and reported next to the
+   match rate every time. In finance a gap gets investigated; a false match gets
+   posted.
+3. **A `resolvability = none` case is scored on whether the pipeline correctly
+   refused to resolve it.** Auto-resolving one counts as a failure even though
+   the records would appear to tie.
+
+It also separates a **false alarm** from a **corroborating flag**: when the bank
+merges two payouts into one credit, truth blames the bank line — but the second
+settlement genuinely has no credit carrying its UTR, and saying so is correct
+behaviour, not noise.
 
 ### Tier vs expectation
 
-The taxonomy predicted which tier should resolve each code. Four beat it:
+The taxonomy predicted which tier should resolve each code. The report prints
+where reality differed:
 
 ```
 E01 resolved at t1, expected t2 -- a cheaper mechanism sufficed
-E06 resolved at t1, expected t2
-E08 resolved at t2, expected t3
-E11 resolved at t1, expected t2
+E06 resolved at t1, expected t2 -- a cheaper mechanism sufficed
+E08 resolved at t2, expected t3 -- a cheaper mechanism sufficed
+E11 resolved at t1, expected t2 -- a cheaper mechanism sufficed
 ```
 
-E08 is the interesting one, and it shrank the model tier -- see below.
+---
 
-## AI judgment: where the model is *not* used
+## AI judgment: where the model is used, and where it is not
 
-**Nothing in T1 or T2 makes a model call.** 83 of 86 exceptions and 100% of the
-settlement-to-bank matching are closed by a fee engine, exact joins, named
-tolerances and a bounded search.
+**T1 and T2 make no model calls at all.** They close 83 of 86 exceptions and
+100% of the settlement-to-bank matching with a fee engine, exact joins, named
+tolerances and a bounded search. At `scale`, **0.7% of records touch a model** —
+a counter in the report, not a claim.
 
 Generating the data with an LLM would have produced amounts that do not sum and
 a ground truth nobody could trust. Matching with one would have produced
-confident wrong links, the most expensive output available in finance.
+confident wrong links.
 
 ### The model tier shrank because of a rule I wrote instead
 
-The taxonomy predicted **E08 (corrupted UTR) needs T3** -- a mangled string
-looks like a job for fuzzy or semantic matching. That was wrong.
-`HDFCN26O6O3OOOOI` is a bad string to match, but the payout is an exact integer
-and the value date sits inside a known window. **Exact amount equality is far
-stronger evidence than any edit-distance guess**, so R11 matches on amount and
-date, requires a *unique* candidate, and escalates when two payouts of the same
-size could both fit.
+The taxonomy predicted **E08 (corrupted UTR) needed T3** — a mangled string looks
+like a job for fuzzy matching. That was wrong. `HDFCN26O6O3OOOOI` is a bad
+string to match, but the payout is an exact integer and the value date sits in a
+known window. **Exact amount equality is far stronger evidence than any
+edit-distance guess**, so R11 matches on amount and date, requires a *unique*
+candidate, and escalates when two payouts of the same size could both fit.
 
-So T3's remit is now:
+### T3 emits no links. Ever.
 
-- **E12** unexplained adjustments -- genuinely narration semantics, 3 of 86 cases
-- **Ambiguous R11 cases** -- two same-sized payouts in one window, where amount
-  cannot discriminate and narration is the only tiebreak
+Not at any confidence, with any evidence. It produces findings and suggestions
+only. That turns the headline guarantee from an empirical result into a
+structural one: **a tier that cannot create a link cannot create a false match.**
+`test_t3_emits_no_links_ever` hands it a provider that flags everything and
+asserts the link count does not move.
 
-That is where a model earns its place, and nowhere else. **3 of 86 exceptions**,
-on records a deterministic pipeline has already proved it cannot resolve. An
-LLM-proposed match will be a suggestion with a confidence and cited evidence,
-never an auto-posted link -- and the harness already counts an auto-resolved
-unresolvable case as a failure.
+So the model decides whether a human *looks*. It never decides whether the books
+balance — `_action_for` escalates any code whose resolvability is not `full`,
+whatever the model says.
 
-## What is built
+### Reproducible without an API key
 
-- [x] Domain model, integer-paise money, fee engine
-- [x] Generator with pre-injection identity proof
-- [x] Twelve injectors, one corruption dimension each
-- [x] Relational ground truth + reproducibility manifest
-- [x] Truth-leak guard, CLI, 98 tests
-- [x] T1 deterministic tier -- threshold-free by definition
-- [x] Eval harness: precision, recall, false-match rate, false-alarm and
+Responses are content-addressed by `sha256(prompt + schema)` and committed under
+`data/llm_cache/`. `--llm cached` is the default and needs no key. Verified with
+`GEMINI_API_KEY` blanked: **0 live calls, identical output on all three
+profiles.** `temperature=0` is not determinism and is not relied on.
+
+And the cache is **checked, not trusted**. `--llm cached` fails loudly on an
+unanswered prompt, *before writing an artefact*, because a silently incomplete
+cache once passed here for days (F12) — and a keyless clone that quietly produces
+different numbers is the one failure this project cannot tolerate.
+`tests/test_cache_completeness.py` asserts 0 unanswered prompts across all three
+shipped profiles against the real committed cache.
+
+The provider is a **chain, not a model**, and that was empirical rather than
+defensive: probing one free key for 90 seconds produced a 503 on
+`gemini-3.7-flash`, a 503 on `gemini-3.6-flash`, a 429 on `gemini-3.5-flash`
+after five calls, and a 404 on `gemini-2.5-flash`. Currently
+`gemini-3.1-flash-lite`, pinned — never a `-latest` alias, so a cache regenerated
+later hits the same weights.
+
+### Where the model gets it wrong, unedited
+
+T3 is the first tier here to produce false alarms, and they are reported rather
+than tuned away. At `scale`, 6 disagreements across 59 adjustments — **every one
+on a string the vocabulary marks as deliberately ambiguous**, and the model is
+correct on all 23 unambiguous ones.
+
+On the false alarm (`"CR ADJ - see support ticket 4471"`, flagged 3/3 at
+confidence 1.00) **the model is arguably right and my label is wrong**: that text
+says where to look, not what the money was for. I did not relabel the data and I
+did not iterate the prompt — both would be overfitting to my own labels. Full
+analysis in F10 of `DECISIONS.md`.
+
+---
+
+## What broke
+
+`DECISIONS.md` is a running log written as it happened — 18 decisions and 12
+failures, each with the number attached. The three worth reading:
+
+- **F7** — bank-fault rates scaled with order count, so at 5,000 orders 56% of
+  payouts had a broken UTR path. T1 was being scored against fiction. Invisible
+  at `default`, screamed at 10×.
+- **F8** — a bank credit of **−₹11,186.80**. Injectors could push a thin batch's
+  payout below zero; the clean world already handled deficits correctly but the
+  injectors were never held to the same rule. Invisible at `default`, showed only
+  at 0.1×.
+- **F12** — the committed model cache was complete for `default` and **stale for
+  the other two profiles**, and passed silently for days because `cached` mode
+  treats a miss as normal. Would have shipped. Now guarded and regression-tested.
+
+The through-line: four separate bugs were invisible on the profile I was
+developing against. Every measurement now runs all three profiles, every time.
+
+---
+
+## Project layout
+
+```
+src/ledgerlock/
+  config.py              every rate, tolerance and cycle parameter — one place
+  domain/                money (integer paise), fees, models, taxonomy
+  generate/              engine, injectors, narration vocabulary, writer
+  io/loaders.py          reads data/raw only; raises TruthLeak otherwise
+  pipeline/              tier1, tier2, tier3, subsetsum, views, controller
+  llm/                   adapter, gemini provider, offline provider, prompts
+  eval/                  metrics, report
+  queueview.py           the exception queue
+tests/                   136 tests across 6 files
+data/raw/                the three sources
+data/truth/              the answer key + reproducibility manifest
+data/llm_cache/          committed model responses — no key needed to reproduce
+```
+
+---
+
+## Status
+
+- [x] Synthetic world with pre-injection identity proof, relational ground truth
+- [x] 12-code taxonomy with a resolvability column
+- [x] T1 deterministic — threshold-free by definition
+- [x] T2 tolerances, cross-cycle lookback, amount+date recovery, bounded
+      subset-sum, out-of-scope classification, batch-gap attribution
+- [x] T3 model-assisted, emitting no links; committed response cache; offline
+      provider; model chain
+- [x] Eval harness: match rate, false-match rate, false alarms,
       correctly-refused accounting, per-tier arc, markdown report
-- [x] T2: tolerance bands, cross-cycle lookback, amount+date recovery,
-      bounded subset-sum, out-of-scope classification, batch-gap attribution
-- [ ] T3 model-assisted residue -- E12 classification and ambiguous candidates
-- [ ] Exception queue view
-
-See `DECISIONS.md` for what broke on the way here.
+- [x] Exception queue in plain English
+- [x] Cache-completeness guard with a regression test over all three profiles
+- [ ] v2 taxonomy: a third narration class for "pointer, not a reason" (F10)
+- [ ] Settlement Q&A over the attribution data R15 already computes

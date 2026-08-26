@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "Entry ENT_005308 is a duplicate of ENT_000921 because both records share an identical capture amount of Rs 59,703.00 and occurred within 50 seconds of each other on order ORD_000892.",
+    "next_step": "Void entry ENT_005308 to remove the duplicate charge from the reconciliation queue."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write one line for a finance team's reconciliation queue.\n\nExplain in plain English what is wrong with this specific record and what to do\nabout it. One sentence each. Use only the facts given; do not invent a cause.\n\nRecord: entry:ENT_005308\nException: Duplicate payment\nAmount involved: Rs 59,703.00\nMachine evidence: identical capture on ORD_000892 50s after ENT_000921\n"
+}

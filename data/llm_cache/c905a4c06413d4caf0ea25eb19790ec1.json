@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "The entry ENT_000120 contains an unexplained adjustment of Rs 3,305.00 because the narration 'MISCELLANEOUS' does not provide a valid business reason for the transaction.",
+    "next_step": "Contact the department responsible for the entry to obtain a specific, bookable justification for the adjustment."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write one line for a finance team's reconciliation queue.\n\nExplain in plain English what is wrong with this specific record and what to do\nabout it. One sentence each. Use only the facts given; do not invent a cause.\n\nRecord: entry:ENT_000120\nException: Unexplained adjustment\nAmount involved: Rs 3,305.00\nMachine evidence: narration 'MISCELLANEOUS' names no bookable reason (model read it as 'generic filler', cited 'MISCELLANEOUS')\n"
+}

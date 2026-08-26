@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "The entry ENT_000602 contains an unexplained adjustment of Rs 11,374.00 because the narration 'OPS ADJ FINAL' does not provide a valid business reason for the transaction.",
+    "next_step": "Contact the operations department to obtain the specific documentation or justification for this adjustment."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write one line for a finance team's reconciliation queue.\n\nExplain in plain English what is wrong with this specific record and what to do\nabout it. One sentence each. Use only the facts given; do not invent a cause.\n\nRecord: entry:ENT_000602\nException: Unexplained adjustment\nAmount involved: Rs 11,374.00\nMachine evidence: narration 'OPS ADJ FINAL' names no bookable reason (model read it as 'internal reference', cited 'OPS ADJ FINAL')\n"
+}

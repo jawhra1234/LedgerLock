@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "The payment of Rs 556.00 for entry ENT_000117 was processed twice, as an identical transaction was captured 21 seconds after the original entry.",
+    "next_step": "Verify the duplicate transaction against order ORD_000001 and initiate a reversal or refund for the redundant payment."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write one line for a finance team's reconciliation queue.\n\nExplain in plain English what is wrong with this specific record and what to do\nabout it. One sentence each. Use only the facts given; do not invent a cause.\n\nRecord: entry:ENT_000117\nException: Duplicate payment\nAmount involved: Rs 556.00\nMachine evidence: identical capture on ORD_000001 21s after ENT_000035\n"
+}

@@ -227,7 +227,9 @@ def r11_recover_by_amount_and_date(
             action=_action_for(code, CONF_EXACT_UNIQUE),
             rule="amount_date_unique", tier=T, confidence=CONF_EXACT_UNIQUE,
             detail=(f"narration does not carry UTR {st.utr}; matched to "
-                    f"{st.settlement_id} on exact amount and date"),
+                    f"{st.settlement_id} on exact amount {fmt(b.credit)} and "
+                    f"value date {b.value_date}"),
+            amount_delta=b.credit,
             supersedes=(f"settlement:{st.settlement_id}",),
         ))
     return new_links, findings

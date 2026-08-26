@@ -13,6 +13,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from . import config
 from .domain.money import fmt
 from .domain.taxonomy import EXCEPTION_META, ExceptionCode, Resolvability
 from .generate.params import PROFILES
@@ -117,19 +118,51 @@ def taxonomy() -> None:
 def run(
     raw: Path = typer.Option(DATA / "raw"),
     out: Path = typer.Option(DATA / "out"),
-    upto: str = typer.Option("t2", help="highest tier to run: t1 or t2"),
+    upto: str = typer.Option("t2", help="highest tier to run: t1, t2 or t3"),
+    llm: str = typer.Option(
+        "cached",
+        help="off | cached (committed responses, no key needed) | live (calls the API)"),
+    allow_cache_miss: bool = typer.Option(
+        False, "--allow-cache-miss",
+        help="accept unanswered prompts in cached mode instead of failing"),
 ) -> None:
     """Reconcile the sources and write the result artifact."""
+    from dotenv import load_dotenv
+
+    from .llm.adapter import CacheIncomplete, LLMClient, Mode
+    from .llm.gemini import build_provider
     from .pipeline.controller import reconcile_sources
     from .pipeline.result import Tier
 
     try:
         ceiling = Tier(upto.lower())
     except ValueError:
-        raise typer.BadParameter(f"unknown tier {upto!r}; use t1 or t2")
+        raise typer.BadParameter(f"unknown tier {upto!r}; use t1, t2 or t3")
+    try:
+        mode = Mode(llm.lower())
+    except ValueError:
+        raise typer.BadParameter(f"unknown llm mode {llm!r}; use off, cached or live")
+
+    load_dotenv()
+    provider = build_provider(prefer_live=mode is Mode.LIVE)
+    if mode is Mode.LIVE and provider.name == "offline":
+        console.print("[yellow]no GEMINI_API_KEY found[/] -- falling back to cache only.")
+        mode = Mode.CACHED
+    client = LLMClient(provider, config.LLM_CACHE_DIR, mode=mode)
 
     src = load_sources(raw)
-    result = reconcile_sources(src, upto=ceiling)
+    result = reconcile_sources(src, upto=ceiling, llm=client)
+
+    # Checked before anything is written, so an incomplete run cannot leave a
+    # recon.json behind for `eval` to score as if it were whole.
+    if not allow_cache_miss:
+        try:
+            client.assert_complete()
+        except CacheIncomplete as e:
+            console.print("[bold red]incomplete model cache[/]")
+            console.print(str(e))
+            raise typer.Exit(1)
+
     out.mkdir(parents=True, exist_ok=True)
     (out / "recon.json").write_text(
         result.model_dump_json(indent=2), encoding="utf-8")
@@ -145,6 +178,14 @@ def run(
     t.add_row("...unnamed (honest residue)", f"{len(result.unclassified):,}")
     auto = sum(1 for f in result.findings if f.action.value == "auto_resolved")
     t.add_row("...auto-resolved", f"{auto:,}")
+    if result.llm:
+        n = result.llm
+        t.add_row("model calls", f"{n.get('calls_made', 0):,}")
+        t.add_row("...served from cache", f"{n.get('cache_hits', 0):,}")
+        touched = n.get("calls_made", 0) + n.get("cache_hits", 0)
+        records = result.n_orders + result.n_entries + result.n_bank_lines
+        t.add_row("records touching a model",
+                  f"{touched / records * 100:.1f}%" if records else "-")
     console.print(t)
 
     by_rule: dict[str, int] = {}
@@ -189,6 +230,25 @@ def eval_cmd(
     report.write_text(to_markdown(s), encoding="utf-8")
     console.print()
     console.print(f"-> {report}")
+
+
+@app.command()
+def queue(
+    out: Path = typer.Option(DATA / "out"),
+    top: int = typer.Option(config.QUEUE_TOP_N, help="individual items to detail"),
+) -> None:
+    """The exception queue: what a human has to look at, and why."""
+    from .queueview import render_queue
+    from .pipeline.result import ReconResult
+
+    artifact = out / "recon.json"
+    if not artifact.exists():
+        console.print("[red]no recon.json[/] -- run `python -m ledgerlock run` first.")
+        raise typer.Exit(1)
+    result = ReconResult.model_validate_json(artifact.read_text(encoding="utf-8"))
+    path = render_queue(result, console, out, top)
+    console.print()
+    console.print(f"-> {path}")
 
 
 def main() -> None:

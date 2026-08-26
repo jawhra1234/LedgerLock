@@ -25,14 +25,8 @@ from ..domain.taxonomy import ExceptionCode as EC
 from .. import config
 from ..domain import fees
 from .engine import World, _stamp, business_day
+from .narrations import OPAQUE_ADJUSTMENTS
 
-OPAQUE_NARRATIONS = [
-    "MISC DR REF 88213",
-    "ADJ-BATCH-CORR-Q2",
-    "MANUAL ENTRY 4471 / NO REF",
-    "RECON DIFF WRITEOFF",
-    "PLATFORM ADJ 0091",
-]
 
 
 def _pick(w: World, pool, n: int, key=lambda x: x):
@@ -188,7 +182,7 @@ def e12_unexplained_adjustment(w: World, n: int) -> None:
             gross=amount, net=signed,
             settlement_id=st.settlement_id, settled_at=st.value_date,
             created_at=_stamp(w.rng, st.value_date),
-            narration=w.rng.choice(OPAQUE_NARRATIONS),
+            narration=w.rng.choice(OPAQUE_ADJUSTMENTS),
         )
         w.entries.append(e)
         w.claim(e.entry_id)

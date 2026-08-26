@@ -1,0 +1,10 @@
+{
+  "answer": {
+    "category": "internal reference",
+    "confidence": 1.0,
+    "evidence": "OPS ADJ FINAL",
+    "explains_purpose": false
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "You are auditing a payment gateway's settlement ledger for a merchant.\n\nThis adjustment has NO order reference, so it cannot be matched to a sale. The\nonly question is whether its narration explains what the adjustment is for.\n\nexplains_purpose = true   the narration names a real, bookable reason a finance\n                          team could post to an account without asking anyone\nexplains_purpose = false  the narration is an internal reference, a code, or\n                          generic filler that names no reason\n\nJudge only the narration. Do not infer a reason from the amount or the date.\nA narration that looks structured or official but still does not say *why* the\nmoney moved is false. Quote only words that appear in the narration as evidence.\n\nNarration: \"OPS ADJ FINAL\"\nDirection: credit to the merchant\nAmount: Rs 11,652.00\nSettled in: STL_0009\n"
+}

@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "The gateway gross amount does not match the ERP order value, resulting in a discrepancy of Rs 3,665.00.",
+    "next_step": "Investigate the source of the Rs 3,665.00 variance and adjust the ERP record to align with the gateway gross amount."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write one line for a finance team's reconciliation queue.\n\nExplain in plain English what is wrong with this specific record and what to do\nabout it. One sentence each. Use only the facts given; do not invent a cause.\n\nRecord: entry:ENT_000153\nException: Material amount mismatch\nAmount involved: Rs 3,665.00\nMachine evidence: gateway gross differs from the ERP order value by Rs 3,665.00; order-value gaps are never absorbed\n"
+}

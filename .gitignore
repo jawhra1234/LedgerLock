@@ -6,3 +6,12 @@ __pycache__/
 build/
 dist/
 data/out/
+
+# Secrets. Never commit a key. .env.example is the committed template.
+.env
+.env.*
+!.env.example
+
+# NOTE: data/llm_cache/ is deliberately NOT ignored. The cached model
+# responses are committed so `eval` reproduces the published numbers on a
+# clean clone with no API key at all.

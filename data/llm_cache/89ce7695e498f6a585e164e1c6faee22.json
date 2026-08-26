@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "The ERP system shows the order as paid, but there is no corresponding transaction record in the payment gateway.",
+    "next_step": "Verify the payment status directly with the gateway provider or initiate a manual reconciliation entry to resolve the discrepancy."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write one line for a finance team's reconciliation queue.\n\nExplain in plain English what is wrong with this specific record and what to do\nabout it. One sentence each. Use only the facts given; do not invent a cause.\n\nRecord: order:ORD_000241\nException: Missing in gateway\nAmount involved: Rs 7,522.00\nMachine evidence: ERP status paid, no gateway entry references it\n"
+}

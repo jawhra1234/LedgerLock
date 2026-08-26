@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "These 28 transactions were successfully captured but remain unsettled because the scheduled settlement cycle has not yet processed them.",
+    "next_step": "Defer these items and do not initiate any collection efforts."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write a note for a finance team's reconciliation queue.\n\n28 item(s) in this cycle share one cause. Explain in ONE sentence what\nhappened, in plain English, for a reader who does not know the system. Then give\none short next step. Do not invent numbers or causes beyond the facts below.\n\nException type: Unsettled at cut-off\nWhat it means: Captured but its settlement cycle has not run yet. Defer, do not chase.\nAutomated handling: deferred\nTotal amount involved: Rs 4,73,874.02\nExample evidence: payment captured 2026-06-30, settlement cycle has not run\n"
+}

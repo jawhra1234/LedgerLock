@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "The transaction entry ENT_000121 contains an unexplained adjustment of Rs 23,129.00 because the narration 'MISC DR REF 88213' does not provide a valid business reason for the debit.",
+    "next_step": "Contact the department associated with reference 88213 to obtain the specific documentation or justification for this miscellaneous charge."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write one line for a finance team's reconciliation queue.\n\nExplain in plain English what is wrong with this specific record and what to do\nabout it. One sentence each. Use only the facts given; do not invent a cause.\n\nRecord: entry:ENT_000121\nException: Unexplained adjustment\nAmount involved: Rs 23,129.00\nMachine evidence: narration 'MISC DR REF 88213' names no bookable reason (model read it as 'generic filler', cited 'MISC')\n"
+}

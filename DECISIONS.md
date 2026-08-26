@@ -423,3 +423,238 @@ to `/dev/null` fails and typer surfaces it as a non-zero exit. Wasted about ten
 minutes chasing a phantom. Redirect to a temp file instead. Recorded because a
 tooling artefact that looks exactly like a real failure is worth knowing about
 before it happens during a demo.
+
+---
+
+## Day 3 (late) -- tier 3, the model boundary
+
+### D15. The first version of the T3 test proved nothing
+
+**Decision.** Widen the adjustment narration vocabulary from 7 strings to 27
+(12 benign, 15 opaque) before writing any T3 code, and include deliberately
+ambiguous cases in both classes.
+
+**Why.** Probing the model on the original 5 opaque and 2 benign strings scored
+7/7, and I nearly banked that. Then I noticed those 7 strings *were* the entire
+vocabulary in the generator -- I had tested a classifier on the only inputs it
+would ever see. That is a weak test wearing a strong test's clothes, and it
+would have produced a headline number with nothing behind it. The wider
+vocabulary immediately found real disagreements (F10), which is what a test is
+for.
+
+### D16. Tier 3 emits no links. Ever.
+
+**Decision.** T3 produces findings and suggestions only, at any confidence,
+with any evidence. Where a model has an opinion about which payout a bank credit
+belongs to, that opinion is recorded as a suggestion for review and never
+becomes a link.
+
+**Why.** It converts the project's headline guarantee from an empirical result
+into a structural one. A tier that *cannot* create a link cannot create a false
+match, so "zero false matches" holds because of the architecture rather than
+because the model behaved well on the day I ran it.
+`test_t3_emits_no_links_ever` feeds it a provider that flags everything and
+asserts the link count is unchanged.
+
+### D17. The model's answers are cached and committed
+
+**Decision.** Every response is content-addressed by `sha256(prompt + schema)`
+and committed under `data/llm_cache/`. `--llm cached` is the default and needs
+no API key; `--llm live` regenerates.
+
+**Why.** This project's whole claim is that its numbers are reproducible from a
+clean clone. An API call is the opposite of that. With the cache committed, a
+judge with no key runs `eval` and gets the published figures exactly -- verified
+by running with `GEMINI_API_KEY` blanked: 0 live calls, 30 cache hits,
+identical output. `temperature=0` is *not* determinism and is not relied on;
+cache entries carry no timestamps so the committed files stay byte-stable.
+
+### D18. A model chain, not a model
+
+**Decision.** `LLM_MODEL_CHAIN` with explicit pinned versions, retry with
+backoff inside a model, then fall through to the next.
+
+**Why.** Empirical, not defensive. Probing one free key took 90 seconds and
+produced three different failures: `gemini-3.7-flash` 503 saturated,
+`gemini-3.6-flash` 503 saturated, `gemini-3.5-flash` 429 throttled after five
+calls, `gemini-2.5-flash` 404 gone. A pipeline that names one model is a
+pipeline that dies when that model is busy. Explicit versions rather than a
+`-latest` alias, because a cache regenerated in three months has to hit the
+same weights.
+
+---
+
+## The full arc
+
+Profile `default`, seed 42, reproduced with `run --upto t1|t2|t3`:
+
+| metric | T1 | T2 | T3 |
+|---|---|---|---|
+| settlement -> bank matching | 90.5% | **100%** | **100%** |
+| **false matches** | **0** | **0** | **0** |
+| exceptions classified | 44/86 | 83/86 | **85/86** |
+| unnamed residue | 24 | 0 | 0 |
+| undetected | 20 | 3 | **1** |
+| false alarms | 0 | 0 | **2** |
+| records touching a model | 0% | 0% | **2.7%** |
+
+At every size, tier unchanged:
+
+| profile | records | T1 | T2 | T3 | classified | false matches | false alarms | model-touched |
+|---|---|---|---|---|---|---|---|---|
+| `smoke` | 191 | 88.9% | 100% | 100% | 18/18 | 0 | 0 | 13.1% |
+| `default` | 1,125 | 90.5% | 100% | 100% | 85/86 | 0 | 2 | 2.7% |
+| `scale` | 10,450 | 89.4% | 100% | 100% | 794/797 | 0 | 3 | 0.7% |
+
+**Over 99% of records at scale never touch a model**, and that is a counter in
+the report rather than a claim.
+
+---
+
+## Failures, day 3 (late)
+
+### F10. The model disagrees with my labels on exactly the strings I wrote as ambiguous
+
+**What happened.** T3 is the first tier in this project to produce false alarms.
+At `scale`: 6 disagreements out of 59 adjustments, in both directions.
+
+Flagged as opaque, labelled benign (3 of 3 instances, confidence 1.00):
+
+```
+"CR ADJ - see support ticket 4471"
+```
+
+Labelled opaque, model called them self-explanatory:
+
+```
+"ADJ-BATCH-CORR-Q2"
+"SETTLEMENT CORR 2026-06"
+"BAL SQUARE OFF"
+```
+
+**Diagnosis.** The errors are not random. All four strings are ones I wrote
+into the vocabulary with a comment marking them as deliberately hard, and the
+model is correct on all 23 unambiguous ones. On the false alarm the model is
+arguably **right and my label is wrong**: "see support ticket 4471" tells you
+where to look, not what the money was for, and you cannot book it to an account
+without opening the ticket. I labelled it benign because it references
+something checkable. The model read the narration itself and found no reason.
+That is a defensible reading, and a second human labeller might well side with
+it.
+
+**What I did not do.** I did not relabel the data to agree with the model, and I
+did not iterate the prompt until the numbers improved. Both would have been
+overfitting to my own labels, and the resulting 100% would have meant nothing.
+The numbers above are the first ones I measured.
+
+**What this actually says.** A binary opaque/benign label is the wrong shape for
+narrations that are genuinely borderline. The right v2 taxonomy would have a
+third class -- "narration is a pointer, not a reason" -- routing to a human to
+follow the reference. I am not changing the taxonomy four days before a
+deadline to improve a metric; that is exactly the move this log exists to catch
+me making. It is written down as the next thing to fix.
+
+**Consolation, and the reason it is survivable.** Every one of these six is a
+*classification* error on records that are structurally unmatchable either way.
+Not one is a false match, and not one closed a case that should have stayed
+open: `unresolvable cases wrongly auto-resolved` is 0 at every profile, because
+E12's resolvability is `none` and `_action_for` escalates it regardless of what
+the model says. The model got to decide whether a human looks. It never got to
+decide whether the books balance.
+
+### F11. A queue row of Rs 0.00, faithfully repeated back to me
+
+Rendering the exception queue for the first time showed three rows -- E03
+orphans, E08 corrupted UTR, E11 split settlement -- with an amount of
+**Rs 0.00**. Those findings had never recorded an `amount_delta`, which makes a
+queue row useless: a reviewer triages by size.
+
+Worse, the model-written explanation dutifully said *"A single settlement payout
+of Rs 0.00 was split..."*. It was not hallucinating. It was repeating the zero I
+handed it. A presentation layer over bad data produces confident nonsense, and
+the LLM made my own gap loudly visible instead of hiding it -- which is a small
+argument for having built Job C at all.
+
+Fixed by recording amounts on all three. Found by looking at the output like a
+user rather than like a test.
+
+---
+
+## Day 4 -- 24 Aug 2026: the end-to-end run
+
+### F12. The committed cache was stale for two of three profiles
+
+**What broke.** Asked to run the whole project end to end from a cold start, I
+built a pristine copy with `data/` and `data/llm_cache/` empty, ran the full
+loop live, and everything passed. Then I compared the freshly built cache
+against the one in my working tree and found them substantially different --
+102 entries present in one and not the other.
+
+Checking what actually mattered rather than the file counts:
+
+```
+profile   cache hits   unanswered
+smoke              4           19
+default           30            0
+scale              0           80
+```
+
+**The cache I was about to commit only worked for `default`** -- the profile I
+had been iterating on. A judge cloning the repo and running `smoke` or `scale`
+would have got zero model answers, E12 reported as fully undetected, and an
+empty queue. The published `scale` figure of 794/797 would not have reproduced.
+
+**Diagnosis.** First suspicion was a non-deterministic generator, which would
+have been far worse. Ruled it out directly: four consecutive `smoke` generations
+produced byte-identical output, including one with a `scale` generation in
+between. The generator is fine. The cache was simply built against an earlier
+state of the data and never revalidated per profile after the last generator
+change -- and nothing checked, because `--llm cached` treats a miss as a normal
+condition rather than an error. That tolerance is correct for a keyless clone
+and is exactly what hid this.
+
+**Fix.** Replaced the cache with the one the cold end-to-end run produced, then
+verified the thing I should have verified in the first place: **0 unanswered for
+all three profiles with `GEMINI_API_KEY` blanked.**
+
+**Why it mattered.** This is the fourth bug in this project that was invisible
+on the profile I was developing against, and the first one that would have
+shipped. I had already written "every measurement runs on all three profiles,
+every time" in F8 and then failed to apply it to the cache, because I was
+thinking of the cache as build output rather than as a measured artefact. It is
+both.
+
+**The real fix, now in place.** Replacing the cache addressed the symptom, not
+the cause -- nothing stopped it recurring. So:
+
+* `LLMClient.assert_complete()` raises `CacheIncomplete` when cached mode could
+  not answer something. `run` checks it **before writing `recon.json`**, so a
+  partial run cannot leave an artefact behind for `eval` to score as if it were
+  whole. It exits 1 with the command needed to fix it, and
+  `--allow-cache-miss` is there for anyone who means it.
+* `tests/test_cache_completeness.py` runs all three shipped profiles against the
+  **real committed cache** with an offline provider, and asserts 0 unanswered.
+  Not a fixture -- the point is to test the artefact that ships.
+
+The second test in that file is the one I would not have thought to write a day
+ago: it measures coverage against *the questions this dataset asks*, not against
+cache file counts. Comparing file counts is what first raised the alarm and it
+was nearly useless -- the two caches simply held different questions, and the
+count difference of 3 hid a real gap of 99.
+
+**Credit where due:** I did not find this. It surfaced only because I was asked
+to run the entire project end to end from the generator forward instead of
+testing the tier I had just built.
+
+### Known cosmetic issue: negative closing balance on `smoke`
+
+`inspect` on the 50-order profile reports a closing bank balance of
+-Rs 6,12,858. The non-gateway noise debits -- salaries, vendor payouts -- are
+sized for a real business but scaled by order count, so on the smallest profile
+they dwarf the settlement credits. No reconciliation metric touches the debit
+column, so nothing measured is affected, but a reader would rightly ask.
+
+Not fixed before freeze, deliberately: changing the generator changes the data,
+which changes every prompt, which invalidates the committed cache and costs
+another full live regeneration. A cosmetic fix is not worth putting the
+reproducibility artefact through that this close to a deadline. Logged instead.

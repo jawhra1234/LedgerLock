@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "Entry ENT_005304 is a duplicate of transaction ORD_002630, which was captured 193 seconds after the initial entry.",
+    "next_step": "Reverse the duplicate payment of Rs 44,293.00 to clear the discrepancy."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write one line for a finance team's reconciliation queue.\n\nExplain in plain English what is wrong with this specific record and what to do\nabout it. One sentence each. Use only the facts given; do not invent a cause.\n\nRecord: entry:ENT_005304\nException: Duplicate payment\nAmount involved: Rs 44,293.00\nMachine evidence: identical capture on ORD_002630 193s after ENT_004404\n"
+}

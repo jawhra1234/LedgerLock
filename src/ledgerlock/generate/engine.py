@@ -26,6 +26,7 @@ from ..domain.models import (
 from ..domain.money import Paise, rupees
 from ..domain.taxonomy import EXCEPTION_META, ExceptionCode
 from ..domain import fees
+from .narrations import BENIGN_ADJUSTMENTS
 from .params import ScenarioSpec
 
 BANK_CODE = "HDFC"
@@ -233,8 +234,14 @@ def _make_chargebacks(w: World) -> None:
 
 
 def _make_adjustments(w: World) -> None:
-    """Benign, explained adjustments. The opaque ones are injected as E12."""
-    for _ in range(max(2, w.spec.n_orders // 120)):
+    """Benign, explained adjustments -- the control group for T3.
+
+    These are structurally identical to the E12 population: an adjustment with
+    no order reference. The only difference is that the narration says what the
+    adjustment is for. A classifier that flags these is raising false alarms on
+    clean records, so there have to be enough of them to make that measurable.
+    """
+    for _ in range(max(3, w.spec.n_orders // 100)):
         day = config.WORLD_START + timedelta(days=w.rng.randrange(w.spec.n_days))
         amount = rupees(w.rng.randint(200, 9_000))
         credit = w.rng.random() < 0.5
@@ -244,8 +251,7 @@ def _make_adjustments(w: World) -> None:
             gross=amount,
             net=amount if credit else -amount,
             created_at=_stamp(w.rng, day),
-            narration="Goodwill credit for support ticket"
-                      if credit else "Recovery of excess payout",
+            narration=w.rng.choice(BENIGN_ADJUSTMENTS),
         ))
 
 

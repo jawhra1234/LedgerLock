@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "The bank's transaction description was formatted incorrectly, preventing the automated system from reading the unique transaction reference number.",
+    "next_step": "Verify the transaction details against the bank statement to confirm the match."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write a note for a finance team's reconciliation queue.\n\n1 item(s) in this cycle share one cause. Explain in ONE sentence what\nhappened, in plain English, for a reader who does not know the system. Then give\none short next step. Do not invent numbers or causes beyond the facts below.\n\nException type: Corrupted UTR in narration\nWhat it means: Bank narration mangles the UTR. Fuzzy/semantic recovery territory.\nAutomated handling: auto_resolved\nTotal amount involved: Rs 7,17,451.73\nExample evidence: narration does not carry UTR HDFCN26060800004; matched to STL_0004 on exact amount Rs 7,17,451.73 and value date 2026-06-08\n"
+}

@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "Fifty orders were processed twice in rapid succession, resulting in duplicate payment records for each transaction.",
+    "next_step": "Review the payment logs for each affected order to confirm if the customer was charged twice and initiate refunds where necessary."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write a note for a finance team's reconciliation queue.\n\n50 item(s) in this cycle share one cause. Explain in ONE sentence what\nhappened, in plain English, for a reader who does not know the system. Then give\none short next step. Do not invent numbers or causes beyond the facts below.\n\nException type: Duplicate payment\nWhat it means: Same order, same amount, seconds apart, two payment ids. Only a human knows whether the customer really paid twice.\nAutomated handling: escalated\nTotal amount involved: Rs 5,26,637.00\nExample evidence: identical capture on ORD_003633 132s after ENT_000010\n"
+}

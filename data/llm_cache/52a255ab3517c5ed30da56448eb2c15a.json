@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "Entry ENT_000591 is a duplicate payment because it matches the details of order ORD_000124, which was processed 230 seconds after the initial entry.",
+    "next_step": "Reverse the duplicate transaction ENT_000591 to correct the account balance."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write one line for a finance team's reconciliation queue.\n\nExplain in plain English what is wrong with this specific record and what to do\nabout it. One sentence each. Use only the facts given; do not invent a cause.\n\nRecord: entry:ENT_000591\nException: Duplicate payment\nAmount involved: Rs 1,83,210.00\nMachine evidence: identical capture on ORD_000124 230s after ENT_000220\n"
+}

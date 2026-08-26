@@ -13,6 +13,7 @@ review, and it is why T1 is allowed to run before anything else.
 from __future__ import annotations
 
 from ..domain.models import EntryType, OrderStatus
+from ..domain.money import fmt
 from ..domain.taxonomy import ExceptionCode as EC
 from ..domain import fees
 from .result import Action, Finding, ProposedLink, Tier
@@ -44,6 +45,8 @@ def r1_order_entry_exact(ix: Index) -> tuple[list[ProposedLink], list[Finding]]:
                 subject_type="entry", subject_id=e.entry_id, code=EC.ORPHAN_PG_ENTRY,
                 action=Action.ESCALATED, rule="order_id_exact", tier=T,
                 detail=f"cites {e.order_id}, absent from the ERP",
+                # A queue row without an amount cannot be triaged.
+                amount_delta=e.net or e.gross,
             ))
     return links, findings
 
@@ -161,8 +164,10 @@ def r5_settlement_bank_exact_utr(ix: Index) -> tuple[list[ProposedLink], list[Fi
                 subject_type="settlement", subject_id=sid,
                 code=EC.SPLIT_SETTLEMENT, action=Action.AUTO_RESOLVED,
                 rule="utr_exact_multi_line_sum", tier=T,
-                detail=(f"payout arrived as {len(hits)} credits "
-                        f"({', '.join(b.line_id for b in hits)}) summing exactly"),
+                detail=(f"payout of {fmt(credited)} arrived as {len(hits)} "
+                        f"credits ({', '.join(b.line_id for b in hits)}) "
+                        "summing exactly"),
+                amount_delta=credited,
             ))
         elif credited != st.payout:
             # The join is certain, the amount is not. Attributing the gap needs

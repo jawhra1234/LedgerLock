@@ -28,9 +28,9 @@
   },
   "counts": {
     "orders": 500,
-    "pg_entries": 595,
+    "pg_entries": 596,
     "bank_lines": 30,
-    "truth_links": 1076,
+    "truth_links": 1077,
     "truth_exceptions": 86
   },
   "settlements": 20,

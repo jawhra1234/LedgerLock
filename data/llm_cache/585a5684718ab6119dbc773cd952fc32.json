@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "Four gateway transactions were flagged because they reference order IDs that do not exist in our ERP system.",
+    "next_step": "Verify the missing order IDs in the source sales platform and manually create the corresponding records in the ERP."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write a note for a finance team's reconciliation queue.\n\n4 item(s) in this cycle share one cause. Explain in ONE sentence what\nhappened, in plain English, for a reader who does not know the system. Then give\none short next step. Do not invent numbers or causes beyond the facts below.\n\nException type: Orphan gateway entry\nWhat it means: Gateway entry references an order_id absent from the ERP.\nAutomated handling: escalated\nTotal amount involved: Rs 11,074.08\nExample evidence: cites ORD_TEST_88047, absent from the ERP\n"
+}

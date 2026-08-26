@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "The bank's transaction descriptions were garbled, preventing the automated system from correctly identifying the Unique Transaction Reference numbers for these four payments.",
+    "next_step": "Verify the manual matches against the bank statement to confirm the reconciliation is accurate."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write a note for a finance team's reconciliation queue.\n\n4 item(s) in this cycle share one cause. Explain in ONE sentence what\nhappened, in plain English, for a reader who does not know the system. Then give\none short next step. Do not invent numbers or causes beyond the facts below.\n\nException type: Corrupted UTR in narration\nWhat it means: Bank narration mangles the UTR. Fuzzy/semantic recovery territory.\nAutomated handling: auto_resolved\nTotal amount involved: Rs 62,90,335.80\nExample evidence: narration does not carry UTR HDFCN26071300029; matched to STL_0029 on exact amount Rs 27,99,824.65 and value date 2026-07-13\n"
+}

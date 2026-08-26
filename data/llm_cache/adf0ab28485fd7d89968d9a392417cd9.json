@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "The ERP system shows these orders as paid, but the payment gateway has no record of the corresponding transactions.",
+    "next_step": "Verify the payment status directly within the gateway dashboard to confirm if the funds were received."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write a note for a finance team's reconciliation queue.\n\n1 item(s) in this cycle share one cause. Explain in ONE sentence what\nhappened, in plain English, for a reader who does not know the system. Then give\none short next step. Do not invent numbers or causes beyond the facts below.\n\nException type: Missing in gateway\nWhat it means: ERP marks the order paid but the gateway has no entry for it.\nAutomated handling: escalated\nTotal amount involved: Rs 1,855.00\nExample evidence: ERP status paid, no gateway entry references it\n"
+}

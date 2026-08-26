@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "These five transactions are legitimate bank credits that did not originate from our payment gateway and therefore do not require matching against our payout records.",
+    "next_step": "Mark these items as out of scope in the reconciliation queue."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write a note for a finance team's reconciliation queue.\n\n5 item(s) in this cycle share one cause. Explain in ONE sentence what\nhappened, in plain English, for a reader who does not know the system. Then give\none short next step. Do not invent numbers or causes beyond the facts below.\n\nException type: Non-gateway inflow\nWhat it means: A real bank credit that is simply not gateway money. Correct outcome is 'out of scope', not 'unmatched'.\nAutomated handling: out_of_scope\nTotal amount involved: Rs 16,06,088.00\nExample evidence: credit of Rs 2,40,999.00 is not remitted by RAZORPAY SOFTWARE PVT LTD and matches no payout amount\n"
+}

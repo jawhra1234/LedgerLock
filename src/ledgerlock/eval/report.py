@@ -138,6 +138,20 @@ def render_console(score: Score, console) -> None:
             r.add_row(rule, str(n), fmt(amount))
         console.print(r)
 
+    if score.llm:
+        n = score.llm
+        m = Table(title="model use", title_style="bold", title_justify="left")
+        m.add_column("field")
+        m.add_column("value", justify="right")
+        m.add_row("provider / mode", f"{n.get('provider')} / {n.get('mode')}")
+        m.add_row("live calls", str(n.get("calls_made", 0)))
+        m.add_row("served from committed cache", str(n.get("cache_hits", 0)))
+        m.add_row("declined / unanswered",
+                  str(n.get("provider_failures", 0) + n.get("cache_misses_unanswered", 0)))
+        m.add_row("[bold]records touching a model[/]",
+                  f"[bold]{_pct(score.records_touching_a_model)}[/]")
+        console.print(m)
+
     checks = Table(title="integrity checks", title_style="bold", title_justify="left")
     checks.add_column("check")
     checks.add_column("result", justify="right")
@@ -240,6 +254,23 @@ def to_markdown(score: Score) -> str:
             m = EXCEPTION_META[cs.code]
             a(f"- **{cs.code.value} {m.label}** -- {cs.missed} of {cs.injected} "
               f"missed; expected at {m.expected_tier.value}")
+        a("")
+    if score.llm:
+        n = score.llm
+        a("## Model use")
+        a("")
+        a("| field | value |")
+        a("|---|---|")
+        a(f"| provider / mode | `{n.get('provider')}` / `{n.get('mode')}` |")
+        a(f"| live calls | {n.get('calls_made', 0)} |")
+        a(f"| served from committed cache | {n.get('cache_hits', 0)} |")
+        a(f"| models consulted | {n.get('models_used')} |")
+        a(f"| **records touching a model** | **{_pct(score.records_touching_a_model)}** |")
+        a("")
+        a("T3 emits findings and suggestions only -- it proposes no links at any")
+        a("confidence. A tier that cannot create a link cannot create a false")
+        a("match, so the false-match rate above is guaranteed by the")
+        a("architecture rather than by the model behaving well today.")
         a("")
     a("## Integrity checks")
     a("")

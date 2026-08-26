@@ -12,7 +12,9 @@ dataset, at any point in the project's life.
 
 from __future__ import annotations
 
-from . import tier1, tier2
+from .. import config
+from . import tier1, tier2, tier3
+from ..llm.adapter import LLMClient, Mode
 from .result import Action, Finding, ProposedLink, ReconResult, Tier
 from .views import Index
 
@@ -43,7 +45,8 @@ def _collapse(findings: list[Finding]) -> list[Finding]:
     ]
 
 
-def reconcile(ix: Index, upto: Tier = Tier.T2) -> ReconResult:
+def reconcile(ix: Index, upto: Tier = Tier.T2,
+              llm: LLMClient | None = None) -> ReconResult:
     wanted = ORDER[:ORDER.index(upto) + 1]
     links: list[ProposedLink] = []
     findings: list[Finding] = []
@@ -60,11 +63,25 @@ def reconcile(ix: Index, upto: Tier = Tier.T2) -> ReconResult:
         findings += f
         tiers.append(Tier.T2)
 
-    # T3 (model-assisted, on whatever T2 genuinely leaves behind) plugs in here.
+    explanations: dict[str, str] = {}
+    llm_summary: dict = {}
+    if Tier.T3 in wanted:
+        # T3 returns no links. A tier that cannot create a link cannot create a
+        # false match, which is why that guarantee is structural here rather
+        # than a property of the model behaving well today.
+        client = llm or LLMClient(_default_provider(), config.LLM_CACHE_DIR,
+                                  mode=Mode.CACHED)
+        f, _ = tier3.run(ix, client, _residue(findings))
+        findings += f
+        explanations = tier3.r18_explain(ix, client, _collapse(findings))
+        llm_summary = client.summary()
+        tiers.append(Tier.T3)
 
     return ReconResult(
         links=links,
         findings=_collapse(findings),
+        explanations=explanations,
+        llm=llm_summary,
         tiers_run=tiers,
         n_orders=len(ix.sources.orders),
         n_entries=len(ix.sources.entries),
@@ -73,5 +90,11 @@ def reconcile(ix: Index, upto: Tier = Tier.T2) -> ReconResult:
     )
 
 
-def reconcile_sources(sources, upto: Tier = Tier.T2) -> ReconResult:
-    return reconcile(Index.build(sources), upto=upto)
+def _default_provider():
+    from ..llm.gemini import OfflineProvider
+    return OfflineProvider()
+
+
+def reconcile_sources(sources, upto: Tier = Tier.T2,
+                      llm: LLMClient | None = None) -> ReconResult:
+    return reconcile(Index.build(sources), upto=upto, llm=llm)

@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "These three items represent refunds for payments that were originally settled in a previous cycle, which are now being deducted from the current payout.",
+    "next_step": "Verify the refund documentation against the original settlement records."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write a note for a finance team's reconciliation queue.\n\n3 item(s) in this cycle share one cause. Explain in ONE sentence what\nhappened, in plain English, for a reader who does not know the system. Then give\none short next step. Do not invent numbers or causes beyond the facts below.\n\nException type: Cross-cycle refund\nWhat it means: Refund of a payment settled in an earlier cycle, dragging this one down.\nAutomated handling: deferred\nTotal amount involved: Rs 1,31,844.88\nExample evidence: reverses ENT_000003, which settled 2026-06-04 in an earlier cycle; drags the 2026-06-08 payout by Rs 1,29,521.00\n"
+}

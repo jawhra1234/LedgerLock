@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "The bank combined two separate settlement payouts into a single credit entry, which caused a mismatch in our automated reconciliation system.",
+    "next_step": "Verify that the combined credit amount matches the sum of STL_0008 and STL_0009."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write a note for a finance team's reconciliation queue.\n\n1 item(s) in this cycle share one cause. Explain in ONE sentence what\nhappened, in plain English, for a reader who does not know the system. Then give\none short next step. Do not invent numbers or causes beyond the facts below.\n\nException type: Merged settlement credit\nWhat it means: Bank aggregated two settlements into one credit line. Subset-sum.\nAutomated handling: auto_resolved\nTotal amount involved: Rs 15,399.65\nExample evidence: one credit covers 2 payouts: STL_0008, STL_0009\n"
+}

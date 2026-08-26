@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "The system processed two identical payments for the same order within seconds of each other, resulting in a potential duplicate charge.",
+    "next_step": "Verify with the customer or payment processor if both transactions were intended."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write a note for a finance team's reconciliation queue.\n\n1 item(s) in this cycle share one cause. Explain in ONE sentence what\nhappened, in plain English, for a reader who does not know the system. Then give\none short next step. Do not invent numbers or causes beyond the facts below.\n\nException type: Duplicate payment\nWhat it means: Same order, same amount, seconds apart, two payment ids. Only a human knows whether the customer really paid twice.\nAutomated handling: escalated\nTotal amount involved: Rs 556.00\nExample evidence: identical capture on ORD_000001 21s after ENT_000035\n"
+}

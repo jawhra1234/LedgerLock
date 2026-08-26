@@ -1,87 +1,87 @@
 subject_type,subject_id,code,resolvability,notes
-entry,ENT_000590,E01,partial,"second capture on ORD_000442, original ENT_000117"
-entry,ENT_000591,E01,partial,"second capture on ORD_000446, original ENT_000210"
-entry,ENT_000592,E01,partial,"second capture on ORD_000408, original ENT_000156"
-entry,ENT_000593,E01,partial,"second capture on ORD_000294, original ENT_000366"
-entry,ENT_000594,E01,partial,"second capture on ORD_000224, original ENT_000186"
-order,ORD_000336,E02,full,"ERP status paid, no gateway entry exists"
-order,ORD_000231,E02,full,"ERP status paid, no gateway entry exists"
-order,ORD_000444,E02,full,"ERP status paid, no gateway entry exists"
-order,ORD_000492,E02,full,"ERP status paid, no gateway entry exists"
-order,ORD_000384,E02,full,"ERP status paid, no gateway entry exists"
-order,ORD_000238,E02,full,"ERP status paid, no gateway entry exists"
-entry,ENT_000595,E03,full,"references ORD_TEST_63035, absent from ERP"
-entry,ENT_000596,E03,full,"references ORD_TEST_73553, absent from ERP"
-entry,ENT_000597,E03,full,"references ORD_TEST_42390, absent from ERP"
-entry,ENT_000598,E03,full,"references ORD_TEST_24967, absent from ERP"
-entry,ENT_000599,E12,none,"no order linkage, narration carries no usable reference"
+entry,ENT_000591,E01,partial,"second capture on ORD_000124, original ENT_000220"
+entry,ENT_000592,E01,partial,"second capture on ORD_000076, original ENT_000361"
+entry,ENT_000593,E01,partial,"second capture on ORD_000391, original ENT_000405"
+entry,ENT_000594,E01,partial,"second capture on ORD_000085, original ENT_000002"
+entry,ENT_000595,E01,partial,"second capture on ORD_000386, original ENT_000150"
+order,ORD_000025,E02,full,"ERP status paid, no gateway entry exists"
+order,ORD_000168,E02,full,"ERP status paid, no gateway entry exists"
+order,ORD_000372,E02,full,"ERP status paid, no gateway entry exists"
+order,ORD_000114,E02,full,"ERP status paid, no gateway entry exists"
+order,ORD_000477,E02,full,"ERP status paid, no gateway entry exists"
+order,ORD_000241,E02,full,"ERP status paid, no gateway entry exists"
+entry,ENT_000596,E03,full,"references ORD_TEST_88047, absent from ERP"
+entry,ENT_000597,E03,full,"references ORD_TEST_45157, absent from ERP"
+entry,ENT_000598,E03,full,"references ORD_TEST_81681, absent from ERP"
+entry,ENT_000599,E03,full,"references ORD_TEST_26173, absent from ERP"
 entry,ENT_000600,E12,none,"no order linkage, narration carries no usable reference"
 entry,ENT_000601,E12,none,"no order linkage, narration carries no usable reference"
-entry,ENT_000329,E04,full,stated fee differs from recomputed fee by 38 paise
-entry,ENT_000163,E04,full,stated fee differs from recomputed fee by -30 paise
-entry,ENT_000002,E04,full,stated fee differs from recomputed fee by -17 paise
-entry,ENT_000211,E04,full,stated fee differs from recomputed fee by 45 paise
-entry,ENT_000254,E04,full,stated fee differs from recomputed fee by -46 paise
-entry,ENT_000421,E04,full,stated fee differs from recomputed fee by -6 paise
-entry,ENT_000060,E04,full,stated fee differs from recomputed fee by -46 paise
-entry,ENT_000078,E04,full,stated fee differs from recomputed fee by 41 paise
-entry,ENT_000042,E04,full,stated fee differs from recomputed fee by 6 paise
-entry,ENT_000214,E04,full,stated fee differs from recomputed fee by 47 paise
-entry,ENT_000094,E04,full,stated fee differs from recomputed fee by -25 paise
-entry,ENT_000396,E04,full,stated fee differs from recomputed fee by 3 paise
-entry,ENT_000424,E04,full,stated fee differs from recomputed fee by -22 paise
-entry,ENT_000097,E04,full,stated fee differs from recomputed fee by -11 paise
-entry,ENT_000037,E04,full,stated fee differs from recomputed fee by -12 paise
-entry,ENT_000168,E05,none,gateway gross differs from order amount by 10600 paise
-entry,ENT_000230,E05,none,gateway gross differs from order amount by 99800 paise
-entry,ENT_000260,E05,none,gateway gross differs from order amount by -35500 paise
-entry,ENT_000488,E06,full,captured after the settlement cut-off for this statement
-entry,ENT_000472,E06,full,captured after the settlement cut-off for this statement
-entry,ENT_000461,E06,full,captured after the settlement cut-off for this statement
-entry,ENT_000465,E06,full,captured after the settlement cut-off for this statement
-entry,ENT_000462,E06,full,captured after the settlement cut-off for this statement
-entry,ENT_000470,E06,full,captured after the settlement cut-off for this statement
-entry,ENT_000475,E06,full,captured after the settlement cut-off for this statement
-entry,ENT_000502,E06,full,captured after the settlement cut-off for this statement
-entry,ENT_000507,E06,full,captured after the settlement cut-off for this statement
-entry,ENT_000476,E06,full,captured after the settlement cut-off for this statement
-entry,ENT_000477,E06,full,captured after the settlement cut-off for this statement
+entry,ENT_000602,E12,none,"no order linkage, narration carries no usable reference"
+entry,ENT_000210,E04,full,stated fee differs from recomputed fee by -25 paise
+entry,ENT_000323,E04,full,stated fee differs from recomputed fee by 3 paise
+entry,ENT_000033,E04,full,stated fee differs from recomputed fee by -22 paise
+entry,ENT_000176,E04,full,stated fee differs from recomputed fee by -11 paise
+entry,ENT_000097,E04,full,stated fee differs from recomputed fee by -12 paise
+entry,ENT_000184,E04,full,stated fee differs from recomputed fee by -27 paise
+entry,ENT_000314,E04,full,stated fee differs from recomputed fee by 20 paise
+entry,ENT_000065,E04,full,stated fee differs from recomputed fee by 19 paise
+entry,ENT_000188,E04,full,stated fee differs from recomputed fee by -8 paise
+entry,ENT_000447,E04,full,stated fee differs from recomputed fee by -13 paise
+entry,ENT_000315,E04,full,stated fee differs from recomputed fee by -40 paise
+entry,ENT_000020,E04,full,stated fee differs from recomputed fee by 1 paise
+entry,ENT_000293,E04,full,stated fee differs from recomputed fee by 32 paise
+entry,ENT_000084,E04,full,stated fee differs from recomputed fee by 35 paise
+entry,ENT_000403,E04,full,stated fee differs from recomputed fee by -39 paise
+entry,ENT_000329,E05,none,gateway gross differs from order amount by 270600 paise
+entry,ENT_000237,E05,none,gateway gross differs from order amount by 342600 paise
+entry,ENT_000153,E05,none,gateway gross differs from order amount by 366500 paise
 entry,ENT_000469,E06,full,captured after the settlement cut-off for this statement
+entry,ENT_000507,E06,full,captured after the settlement cut-off for this statement
+entry,ENT_000495,E06,full,captured after the settlement cut-off for this statement
+entry,ENT_000502,E06,full,captured after the settlement cut-off for this statement
 entry,ENT_000464,E06,full,captured after the settlement cut-off for this statement
-entry,ENT_000463,E06,full,captured after the settlement cut-off for this statement
-entry,ENT_000468,E06,full,captured after the settlement cut-off for this statement
-entry,ENT_000466,E06,full,captured after the settlement cut-off for this statement
-entry,ENT_000467,E06,full,captured after the settlement cut-off for this statement
-entry,ENT_000484,E06,full,captured after the settlement cut-off for this statement
+entry,ENT_000488,E06,full,captured after the settlement cut-off for this statement
+entry,ENT_000489,E06,full,captured after the settlement cut-off for this statement
 entry,ENT_000508,E06,full,captured after the settlement cut-off for this statement
 entry,ENT_000496,E06,full,captured after the settlement cut-off for this statement
-entry,ENT_000491,E06,full,captured after the settlement cut-off for this statement
-entry,ENT_000497,E06,full,captured after the settlement cut-off for this statement
+entry,ENT_000468,E06,full,captured after the settlement cut-off for this statement
+entry,ENT_000463,E06,full,captured after the settlement cut-off for this statement
+entry,ENT_000475,E06,full,captured after the settlement cut-off for this statement
 entry,ENT_000471,E06,full,captured after the settlement cut-off for this statement
-entry,ENT_000489,E06,full,captured after the settlement cut-off for this statement
-entry,ENT_000473,E06,full,captured after the settlement cut-off for this statement
+entry,ENT_000462,E06,full,captured after the settlement cut-off for this statement
+entry,ENT_000461,E06,full,captured after the settlement cut-off for this statement
+entry,ENT_000477,E06,full,captured after the settlement cut-off for this statement
 entry,ENT_000486,E06,full,captured after the settlement cut-off for this statement
-entry,ENT_000495,E06,full,captured after the settlement cut-off for this statement
+entry,ENT_000470,E06,full,captured after the settlement cut-off for this statement
+entry,ENT_000497,E06,full,captured after the settlement cut-off for this statement
 entry,ENT_000474,E06,full,captured after the settlement cut-off for this statement
-entry,ENT_000493,E07,full,reverses ENT_000106 settled 2026-06-10 in an earlier cycle
-entry,ENT_000505,E07,full,reverses ENT_000013 settled 2026-06-04 in an earlier cycle
-entry,ENT_000492,E07,full,reverses ENT_000054 settled 2026-06-08 in an earlier cycle
-entry,ENT_000485,E07,full,reverses ENT_000323 settled 2026-06-23 in an earlier cycle
-entry,ENT_000504,E07,full,reverses ENT_000079 settled 2026-06-08 in an earlier cycle
-entry,ENT_000482,E07,full,reverses ENT_000034 settled 2026-06-05 in an earlier cycle
-entry,ENT_000501,E07,full,reverses ENT_000037 settled 2026-06-05 in an earlier cycle
-entry,ENT_000503,E07,full,reverses ENT_000352 settled 2026-06-26 in an earlier cycle
-entry,ENT_000500,E07,full,reverses ENT_000419 settled 2026-06-29 in an earlier cycle
+entry,ENT_000472,E06,full,captured after the settlement cut-off for this statement
+entry,ENT_000473,E06,full,captured after the settlement cut-off for this statement
+entry,ENT_000484,E06,full,captured after the settlement cut-off for this statement
+entry,ENT_000467,E06,full,captured after the settlement cut-off for this statement
+entry,ENT_000465,E06,full,captured after the settlement cut-off for this statement
+entry,ENT_000476,E06,full,captured after the settlement cut-off for this statement
+entry,ENT_000466,E06,full,captured after the settlement cut-off for this statement
+entry,ENT_000491,E06,full,captured after the settlement cut-off for this statement
 entry,ENT_000480,E07,full,reverses ENT_000004 settled 2026-06-03 in an earlier cycle
-entry,ENT_000481,E07,full,reverses ENT_000321 settled 2026-06-23 in an earlier cycle
-entry,ENT_000487,E07,full,reverses ENT_000110 settled 2026-06-10 in an earlier cycle
-entry,ENT_000498,E07,full,reverses ENT_000223 settled 2026-06-16 in an earlier cycle
-entry,ENT_000490,E07,full,reverses ENT_000218 settled 2026-06-16 in an earlier cycle
+entry,ENT_000493,E07,full,reverses ENT_000106 settled 2026-06-10 in an earlier cycle
 entry,ENT_000499,E07,full,reverses ENT_000332 settled 2026-06-24 in an earlier cycle
-entry,ENT_000483,E07,full,reverses ENT_000108 settled 2026-06-10 in an earlier cycle
+entry,ENT_000498,E07,full,reverses ENT_000223 settled 2026-06-16 in an earlier cycle
 entry,ENT_000479,E07,full,reverses ENT_000274 settled 2026-06-22 in an earlier cycle
-bank_line,LINE_000011,E08,full,true UTR HDFCN26061700011 appears as 'HDFCN26061700'
-bank_line,LINE_000029,E10,full,one credit covers STL_0013 and STL_0014
-settlement,STL_0017,E11,full,"payout arrived as 2 credits: ['LINE_000030', 'LINE_000031']"
+entry,ENT_000483,E07,full,reverses ENT_000108 settled 2026-06-10 in an earlier cycle
+entry,ENT_000500,E07,full,reverses ENT_000419 settled 2026-06-29 in an earlier cycle
+entry,ENT_000481,E07,full,reverses ENT_000321 settled 2026-06-23 in an earlier cycle
+entry,ENT_000482,E07,full,reverses ENT_000034 settled 2026-06-05 in an earlier cycle
+entry,ENT_000505,E07,full,reverses ENT_000013 settled 2026-06-04 in an earlier cycle
+entry,ENT_000501,E07,full,reverses ENT_000037 settled 2026-06-05 in an earlier cycle
+entry,ENT_000490,E07,full,reverses ENT_000218 settled 2026-06-16 in an earlier cycle
+entry,ENT_000504,E07,full,reverses ENT_000079 settled 2026-06-08 in an earlier cycle
+entry,ENT_000487,E07,full,reverses ENT_000110 settled 2026-06-10 in an earlier cycle
+entry,ENT_000492,E07,full,reverses ENT_000054 settled 2026-06-08 in an earlier cycle
+entry,ENT_000503,E07,full,reverses ENT_000352 settled 2026-06-26 in an earlier cycle
+entry,ENT_000485,E07,full,reverses ENT_000323 settled 2026-06-23 in an earlier cycle
+bank_line,LINE_000004,E08,full,true UTR HDFCN26060800004 appears as 'HDFCN26060800'
+bank_line,LINE_000029,E10,full,one credit covers STL_0011 and STL_0012
+settlement,STL_0014,E11,full,"payout arrived as 2 credits: ['LINE_000030', 'LINE_000031']"
 bank_line,LINE_000032,E09,full,"direct customer transfer from NORTHSTAR LABS PVT LTD, not a gateway payout"
-bank_line,LINE_000033,E09,full,"direct customer transfer from S KUMAR, not a gateway payout"
+bank_line,LINE_000033,E09,full,"direct customer transfer from K R ENTERPRISES, not a gateway payout"

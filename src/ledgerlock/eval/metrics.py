@@ -89,6 +89,13 @@ class Score:
     n_records: int
     tiers: list[str]
     manifest: dict = field(default_factory=dict)
+    llm: dict = field(default_factory=dict)
+
+    @property
+    def records_touching_a_model(self) -> float:
+        """The AI-judgment number, measured rather than claimed."""
+        n = self.llm.get("calls_made", 0) + self.llm.get("cache_hits", 0)
+        return n / self.n_records if self.n_records else 0.0
 
     # -- headline ----------------------------------------------------------
     @property
@@ -236,4 +243,5 @@ def score(result: ReconResult, truth: Truth, sources: Sources,
         n_records=len(sources.orders) + len(sources.entries) + len(sources.bank_lines),
         tiers=[t.value for t in result.tiers_run],
         manifest=manifest or {},
+        llm=dict(result.llm or {}),
     )

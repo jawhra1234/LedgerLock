@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "The gateway entry ENT_000598 references order ORD_TEST_81681, which does not exist in the ERP system.",
+    "next_step": "Verify if the order was created under a different ID or manually create the missing order record in the ERP to match the gateway entry."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write one line for a finance team's reconciliation queue.\n\nExplain in plain English what is wrong with this specific record and what to do\nabout it. One sentence each. Use only the facts given; do not invent a cause.\n\nRecord: entry:ENT_000598\nException: Orphan gateway entry\nAmount involved: Rs 3,624.87\nMachine evidence: cites ORD_TEST_81681, absent from the ERP\n"
+}

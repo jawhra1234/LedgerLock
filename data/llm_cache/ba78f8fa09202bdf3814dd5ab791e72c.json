@@ -1,0 +1,8 @@
+{
+  "answer": {
+    "explanation": "These three items were automatically reconciled because a single settlement payment was split into two separate bank credits that sum to the expected total.",
+    "next_step": "Verify the bank statement totals match the system records."
+  },
+  "model": "gemini-3.1-flash-lite",
+  "prompt": "Write a note for a finance team's reconciliation queue.\n\n3 item(s) in this cycle share one cause. Explain in ONE sentence what\nhappened, in plain English, for a reader who does not know the system. Then give\none short next step. Do not invent numbers or causes beyond the facts below.\n\nException type: Split settlement credit\nWhat it means: One settlement arrived as two bank credits.\nAutomated handling: auto_resolved\nTotal amount involved: Rs 17,82,769.50\nExample evidence: payout of Rs 7,18,971.73 arrived as 2 credits (LINE_000154, LINE_000155) summing exactly\n"
+}

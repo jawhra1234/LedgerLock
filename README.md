@@ -41,8 +41,67 @@ matcher, not of one convenient dataset:
 | `default` | 1,126 | 86 | 90.5% | 100% | 100% | 85/86 | **0** | 2.7% |
 | `scale` | 10,450 | 797 | 89.4% | 100% | 100% | 794/797 | **0** | 0.7% |
 
-**Zero false matches at every size and every tier.** 144 tests. Every figure
+**Zero false matches at every size and every tier.** 154 tests. Every figure
 above reproduces from a clean clone **with no API key**.
+
+### Is seed 42 lucky?
+
+Every number above comes from one seed, so the same pipeline was run over **220
+independently generated worlds** across three disjoint seed ranges —
+**582,053 records, 44,232 injected exceptions**:
+
+| seed range | profiles | worlds | settlement → bank | false matches |
+|---|---|---|---|---|
+| 1–20 | all three | 60 | 100% (min = median = max) | **0** |
+| 500–519 | all three | 60 | 100% (min = median = max) | **0** |
+| 1000–1099 | `default` | 100 | 100% (min = median = max) | **0** |
+
+**Zero false matches and zero wrongly-closed cases across all 220.**
+`python -m ledgerlock sweep` reproduces the first range in about 80 seconds.
+
+Three separate ranges because one range could itself be lucky.
+
+#### The flat 100% is a claim too, so it was attacked three ways
+
+**Are the hard cases even present?** If some worlds had no mangled UTR or merged
+credit, 100% would be trivial. All 60 checked: **0 worlds with no hard cases**
+— 2 per world at `smoke`/`default`, 7 at `scale`.
+
+**Can the sweep tell a worse pipeline from a better one?** The same 60 worlds at
+T1 only, where the spread is real:
+
+```
+default   min 90.0%   median 90.9%   worst seed 10
+scale     min 89.4%   median 89.4%   worst seed 1
+smoke     min 81.8%   median 87.9%   worst seed 13
+```
+
+**Can it report a false match at all?** R11 was sabotaged — its uniqueness
+requirement stripped so it links any unclaimed credit regardless of amount,
+which is exactly the confident wrong match this project exists to avoid:
+
+```
+baseline (correct R11):    0 false matches,  0 dirty worlds
+sabotaged R11:             7 false matches,  6/6 dirty worlds, seeds named
+```
+
+That is a permanent test — `test_the_sweep_catches_a_deliberately_broken_matcher`
+— and removing the sabotage makes it fail, so it is not a no-op either.
+
+#### What the sweep does and does not prove
+
+It runs T1+T2, not T3: tier 3 emits no links, so link metrics are identical at
+T2 and T3, and the committed model cache covers seed 42 only.
+
+Flat 100% is the *expected* shape here, not a surprise: T2 recovers mangled UTRs
+by exact amount-and-date and merged credits by exact subset-sum, and exact
+arithmetic that works at all works on every world. **The number worth reading is
+the 0 false matches**, because that is the property with real engineering behind
+it — uniqueness requirements, ambiguity refusal, a tier that cannot emit links —
+and it is the one proven capable of failing.
+
+And it proves nothing about *real* bank data. It proves this pipeline holds
+across 220 worlds from a generator whose rules are in this repo.
 
 ### Two numbers, never blended
 
@@ -65,6 +124,7 @@ python -m ledgerlock run --upto t3                          # reconcile
 python -m ledgerlock eval                                   # score it
 python -m ledgerlock queue                                  # the exception queue
 python -m ledgerlock verify --profile all                   # assert every claim below
+python -m ledgerlock sweep                                  # 60 worlds, is seed 42 lucky?
 pytest -q
 ```
 
@@ -84,6 +144,7 @@ python -m ledgerlock run --upto t3 --llm off # skip the model entirely
 python -m ledgerlock eval                    # -> data/out/report.md
 python -m ledgerlock queue                   # -> data/out/queue.md
 python -m ledgerlock verify --profile all|smoke|default|scale
+python -m ledgerlock sweep --profiles smoke,default,scale --seeds 20 --upto t1|t2
 ```
 
 To regenerate the model responses yourself: `cp .env.example .env`, add a
@@ -361,7 +422,7 @@ analysis in F10 of `DECISIONS.md`.
 
 Three layers, each doing something the others cannot.
 
-**`pytest` — 144 tests.** Proves the parts behave: the generator is
+**`pytest` — 154 tests.** Proves the parts behave: the generator is
 deterministic, injection is surgical, subset-sum refuses ambiguity, T3 emits no
 links, the committed cache covers every profile.
 
@@ -385,6 +446,11 @@ That last row is deliberately **informational, not asserted**. A critical check
 demanding zero false alarms would be a standing invitation to tune the data until
 it passed.
 
+**`ledgerlock sweep` — proves it was not one lucky dataset.** 220 worlds across
+three seed ranges, reporting min/median/max and naming the worst seed so the
+weakest case is reproducible rather than taken on trust. Exits non-zero if any
+world produces a false match.
+
 **CI — proves it on someone else's machine.** Tests across Python 3.11–3.13 on
 Linux plus a Windows job, then a separate job that regenerates the committed
 dataset and reconciles all three profiles end to end. The workflow references no
@@ -392,6 +458,13 @@ secrets and has a step that *fails if an API key is present*, because keyless
 reproduction is a property being tested rather than assumed. The Windows job runs
 with `PYTHONUTF8=0` to force legacy `cp1252` and catch any file I/O missing an
 explicit encoding.
+
+CI has already earned this twice. Its first run ever, in 40 seconds, found that
+`httpx` and `python-dotenv` were imported but never declared — `pip install -e .`
+in a clean venv was broken for everyone but me. Its second found that
+"byte-identical" was true on Windows and false on Linux, because git stored the
+CSVs as LF while `csv.writer` emitted CRLF. Both are in `DECISIONS.md` as F14
+and F15.
 
 ---
 
@@ -437,7 +510,7 @@ src/ledgerlock/
   llm/                   adapter, gemini provider, offline provider, prompts
   eval/                  metrics, report
   queueview.py           the exception queue
-tests/                   144 tests across 7 files
+tests/                   154 tests across 8 files
 data/raw/                the three sources
 data/truth/              the answer key + reproducibility manifest
 data/llm_cache/          committed model responses — no key needed to reproduce
@@ -460,5 +533,7 @@ data/llm_cache/          committed model responses — no key needed to reproduc
 - [x] Cache-completeness guard with a regression test over all three profiles
 - [x] `ledgerlock verify` — asserts every published guarantee; CI on Linux
       (3.11–3.13) and Windows, keyless, with a no-API-key assertion
+- [x] `ledgerlock sweep` — 220 independent worlds, 582k records, 0 false matches,
+      with a mutation test proving the sweep can fail
 - [ ] v2 taxonomy: a third narration class for "pointer, not a reason" (F10)
 - [ ] Settlement Q&A over the attribution data R15 already computes

@@ -810,3 +810,35 @@ and I had "verified" it perhaps a dozen times -- always on Windows. Two CI runs
 found two different versions of the same mistake: **the only witness was the
 machine that wrote the code.** That is now three failures (F12, F14, F15) with
 the same shape, and it is the thing I would most want to be asked about.
+
+### D21. A distribution, not a point
+
+**Decision.** `ledgerlock sweep` runs the pipeline over 20 seeds x 3 profiles --
+60 independently generated worlds, 235,026 records, 17,828 injected exceptions
+-- and reports min/median/max plus the worst seed by name.
+
+**Why.** Every other number here comes from seed 42, and the brief this was
+built against says outright that one cherry-picked match proves nothing. A
+reader is entitled to ask whether the seed is lucky. The answer is now a
+distribution: **100% settlement-to-bank on every one of the 60, zero false
+matches, zero wrongly-closed cases.**
+
+Three choices inside it:
+
+* **T1+T2, not T3.** Tier 3 emits no links, so link metrics are identical at T2
+  and T3 -- and the committed cache covers seed 42 only, so a T3 sweep would be
+  reporting on prompts nobody ever answered. Stated in the output rather than
+  left for a reader to notice.
+* **Sources built in memory.** The CSV round-trip is separately proven field by
+  field, so re-proving it sixty times would buy nothing but slower sweeps.
+* **The worst seed is named**, so any reader can reproduce the weakest case
+  rather than take the median on trust.
+
+**The number being flat is itself a claim that needs proof.** A sweep reporting
+100% because it is measuring nothing is worse than no sweep -- it manufactures
+confidence. So the same 60 worlds were swept at T1, where the spread is real:
+81.8%-90.9%, worst seed named. `test_the_sweep_measures_something` asserts T1's
+mean recall is strictly below T2's on identical worlds, and
+`test_recall_is_computed_from_real_link_counts` guards the specific trap that
+`recall` returns 1.0 when the truth set is empty -- a sweep over link-less
+worlds would otherwise report a perfect score.

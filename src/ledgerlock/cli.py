@@ -251,6 +251,51 @@ def queue(
     console.print(f"-> {path}")
 
 
+@app.command()
+def sweep(
+    profiles: str = typer.Option("smoke,default,scale", help="comma-separated"),
+    seeds: int = typer.Option(20, help="how many consecutive seeds to run"),
+    start_seed: int = typer.Option(1),
+    upto: str = typer.Option("t2", help="t1 or t2; t3 emits no links, so t2 is the ceiling that matters"),
+    out: Path = typer.Option(DATA / "out"),
+) -> None:
+    """Run the pipeline over many independent worlds and report the spread."""
+    from .generate.params import PROFILES
+    from .pipeline.result import Tier
+    from .sweep import render, run_sweep, to_markdown
+
+    names = [p.strip() for p in profiles.split(",") if p.strip()]
+    for n in names:
+        if n not in PROFILES:
+            raise typer.BadParameter(f"unknown profile {n!r}")
+    try:
+        ceiling = Tier(upto.lower())
+    except ValueError:
+        raise typer.BadParameter(f"unknown tier {upto!r}")
+    if ceiling is Tier.T3:
+        raise typer.BadParameter(
+            "t3 needs a committed cache per seed and emits no links anyway; use t2")
+
+    seed_list = list(range(start_seed, start_seed + seeds))
+    total = len(names) * len(seed_list)
+    with console.status("") as status:
+        def tick(profile: str, seed: int) -> None:
+            tick.n += 1
+            status.update(f"sweeping [bold]{profile}[/] seed {seed} "
+                          f"({tick.n}/{total})")
+        tick.n = 0
+        result = run_sweep(names, seed_list, ceiling, progress=tick)
+
+    render(result, console)
+    out.mkdir(parents=True, exist_ok=True)
+    path = out / "sweep.md"
+    path.write_text(to_markdown(result), encoding="utf-8", newline="\n")
+    console.print()
+    console.print(f"-> {path}")
+    if result.dirty:
+        raise typer.Exit(1)
+
+
 @app.command("verify")
 def verify_cmd(
     profile: str = typer.Option("all", help="smoke | default | scale | all"),

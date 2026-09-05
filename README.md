@@ -41,7 +41,7 @@ matcher, not of one convenient dataset:
 | `default` | 1,126 | 86 | 90.5% | 100% | 100% | 85/86 | **0** | 2.7% |
 | `scale` | 10,450 | 797 | 89.4% | 100% | 100% | 794/797 | **0** | 0.7% |
 
-**Zero false matches at every size and every tier.** 154 tests. Every figure
+**Zero false matches at every size and every tier.** 175 tests. Every figure
 above reproduces from a clean clone **with no API key**.
 
 ### Is seed 42 lucky?
@@ -125,6 +125,7 @@ python -m ledgerlock eval                                   # score it
 python -m ledgerlock queue                                  # the exception queue
 python -m ledgerlock verify --profile all                   # assert every claim below
 python -m ledgerlock sweep                                  # 60 worlds, is seed 42 lucky?
+streamlit run app.py                                        # the dashboard
 pytest -q
 ```
 
@@ -418,11 +419,42 @@ analysis in F10 of `DECISIONS.md`.
 
 ---
 
+## The dashboard
+
+```bash
+pip install -e ".[app]"
+streamlit run app.py
+```
+
+Five tabs over `data/out/recon.json` and `score.json`:
+
+| tab | what it answers |
+|---|---|
+| **Exception queue** | what a human has to look at, grouped by what was *done* about it — decisions first, noise last |
+| **Audit one record** | one id in, every link and finding that touched it out, each with its rule, tier, confidence and evidence |
+| **By exception code** | injected vs detected vs classified vs missed, with `resolvable` visible |
+| **Which tier did the work** | read off the artefact — and the model tier shows **zero links** |
+| **Robustness sweep** | the 220-world result |
+
+**It is a view and nothing else.** `src/ledgerlock/dashboard.py` holds pure
+functions over two JSON files; `app.py` is a thin shell.
+`test_the_dashboard_module_contains_no_reconciliation_logic` greps the module
+and fails if it ever imports `tier1/tier2/tier3/reconcile/subsetsum/load_truth`
+— a viewer that recomputed anything would be a second implementation free to
+disagree with the one that was measured, and the number on screen would stop
+being the number in the report. That is also why `eval` emits `score.json`
+beside `report.md`.
+
+Streamlit is an optional `[app]` extra. Nothing about the result depends on
+having it installed.
+
+---
+
 ## How these claims are checked
 
 Three layers, each doing something the others cannot.
 
-**`pytest` — 154 tests.** Proves the parts behave: the generator is
+**`pytest` — 175 tests.** Proves the parts behave: the generator is
 deterministic, injection is surgical, subset-sum refuses ambiguity, T3 emits no
 links, the committed cache covers every profile.
 
@@ -490,11 +522,16 @@ failures, each with the number attached. The three worth reading:
   on Linux: git stored the CSVs as LF while `csv.writer` emitted CRLF. The most
   load-bearing sentence in this README was quietly platform-specific, and I had
   "verified" it a dozen times — always on the same machine.
+- **F16** — the dashboard returned `200 OK` while silently serving stale data
+  forever, because `@st.cache_data` ignores underscore-prefixed parameters.
+  Streamlit runs the page over a websocket, so HTTP said healthy either way.
 
-The through-line: four bugs were invisible because I only ran the profile I was
-developing against, and one because I only ran in the environment I was
-developing in. Same mistake, one axis over. Every measurement now runs all three
-profiles, and CI runs on a machine that is not mine.
+**The through-line, and the honest headline of this project:** six of the
+sixteen logged failures are the same mistake. I kept accepting a single weak
+witness in place of the thing I actually cared about — one profile, one machine,
+one seed, one `200 OK`. Each instance produced a permanent guard: all three
+profiles on every measurement, CI on a machine that is not mine, a 220-world
+sweep, and a test harness that runs the page instead of pinging it.
 
 ---
 
@@ -509,8 +546,12 @@ src/ledgerlock/
   pipeline/              tier1, tier2, tier3, subsetsum, views, controller
   llm/                   adapter, gemini provider, offline provider, prompts
   eval/                  metrics, report
-  queueview.py           the exception queue
-tests/                   154 tests across 8 files
+  queueview.py           the exception queue (terminal)
+  dashboard.py           pure data prep for the web view
+  sweep.py               robustness sweep over many worlds
+  verify.py              asserts every published guarantee
+app.py                   the Streamlit dashboard
+tests/                   175 tests across 9 files
 data/raw/                the three sources
 data/truth/              the answer key + reproducibility manifest
 data/llm_cache/          committed model responses — no key needed to reproduce

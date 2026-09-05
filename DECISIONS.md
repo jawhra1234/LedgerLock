@@ -842,3 +842,44 @@ mean recall is strictly below T2's on identical worlds, and
 `test_recall_is_computed_from_real_link_counts` guards the specific trap that
 `recall` returns 1.0 when the truth set is empty -- a sweep over link-less
 worlds would otherwise report a perfect score.
+
+### D22. The dashboard may not compute anything
+
+**Decision.** `src/ledgerlock/dashboard.py` is pure functions over
+`recon.json` and `score.json`. It never imports the pipeline and never reads
+ground truth, and a test greps the module to keep it that way. `eval` gained a
+machine-readable `score.json` specifically so the view would never need to
+score anything itself.
+
+**Why.** A dashboard that recomputed a match rate would be a second
+implementation of the thing being measured, free to drift from the one the
+harness verified -- and the number a viewer trusts would stop being the number
+in the report. Cheaper to make that structurally impossible than to keep two
+implementations honest.
+
+### F16. Two bugs a 200 OK could never have found
+
+**What broke.** The dashboard served `200` and reported healthy, and was wrong
+in two ways.
+
+`@st.cache_data` **excludes underscore-prefixed parameters from the cache key**,
+so `_board(_mtimes)` pinned the first load forever: after any new pipeline run
+the dashboard would have kept showing the old numbers, silently. Found only
+because the missing-artefacts test saw the *previous* test's data survive into a
+directory that contained none.
+
+And a run with zero findings crashed the queue tab outright --
+`StreamlitAPIException`, because a multiselect default must exist in its
+options. The data layer already handled the empty case; the view did not.
+
+**Why the obvious check missed both.** Streamlit executes the page over a
+websocket, so `GET /` returns 200 whether or not the script raises. Only
+`streamlit.testing.v1.AppTest`, which actually runs it, sees the failure. The
+fix for the first is pinned by a test that writes 111 records, renders, changes
+to 222, and asserts the view followed.
+
+**The pattern, again.** "It returned 200" is the same species of evidence as
+"it passed on my machine" and "it passed on seed 42" -- a single weak witness
+standing in for the thing you actually care about. That is now six of sixteen
+failures in this log with the same shape, and it is the honest headline of the
+whole project: I kept confusing *a* check with *the* check.

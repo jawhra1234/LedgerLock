@@ -139,6 +139,58 @@ class Score:
         return sum(c.missed for c in self.codes)
 
 
+def score_to_dict(s: Score) -> dict:
+    """Machine-readable score, so a viewer never has to recompute one.
+
+    The dashboard reads this and `recon.json`. It deliberately has no access to
+    ground truth and no reconciliation logic of its own -- two implementations
+    that could disagree would undo the point of the whole project.
+    """
+    return {
+        "profile": s.manifest.get("profile"),
+        "seed": s.manifest.get("seed"),
+        "reproduce": s.manifest.get("reproduce"),
+        "tiers": s.tiers,
+        "n_records": s.n_records,
+        "links": {
+            lt: {
+                "in_truth": v.in_truth, "proposed": v.proposed,
+                "tp": v.tp, "fp": v.fp, "fn": v.fn,
+                "precision": v.precision, "recall": v.recall,
+                "false_match_rate": v.false_match_rate,
+            }
+            for lt, v in s.links.items()
+        },
+        "excluded_link_types": EXCLUDED_LINK_TYPES,
+        "codes": [
+            {
+                "code": c.code.value,
+                "label": EXCEPTION_META[c.code].label,
+                "resolvability": EXCEPTION_META[c.code].resolvability.value,
+                "expected_tier": EXCEPTION_META[c.code].expected_tier.value,
+                "injected": c.injected, "detected": c.detected,
+                "coded": c.coded, "miscoded": c.miscoded,
+                "unclassified": c.unclassified, "missed": c.missed,
+                "resolved_at": c.resolved_at,
+            }
+            for c in s.codes
+        ],
+        "totals": {
+            "exceptions_injected": s.exceptions_injected,
+            "exceptions_detected": s.exceptions_detected,
+            "exceptions_coded": s.exceptions_coded,
+            "exceptions_missed": s.exceptions_missed,
+            "false_matches": s.total_fp,
+            "false_alarms": len(s.false_alarms),
+            "corroborating": len(s.corroborating),
+            "unresolvable_auto_resolved": len(s.unresolvable_auto_resolved),
+            "residue": len(s.residue),
+            "records_touching_a_model": s.records_touching_a_model,
+        },
+        "llm": s.llm,
+    }
+
+
 def _related(truth: Truth) -> dict[Subject, set[Subject]]:
     """Subjects that share a true edge.
 

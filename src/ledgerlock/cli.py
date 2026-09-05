@@ -227,7 +227,13 @@ def eval_cmd(
     s = score(result, load_truth(truth), load_sources(raw), manifest)
     render_console(s, console)
     report = out / "report.md"
-    report.write_text(to_markdown(s), encoding="utf-8")
+    report.write_text(to_markdown(s), encoding="utf-8", newline="\n")
+    # Machine-readable twin, so the dashboard can show a score without
+    # recomputing one. See eval.metrics.score_to_dict.
+    from .eval.metrics import score_to_dict
+    (out / "score.json").write_text(
+        json.dumps(score_to_dict(s), indent=2, default=str),
+        encoding="utf-8", newline="\n")
     console.print()
     console.print(f"-> {report}")
 

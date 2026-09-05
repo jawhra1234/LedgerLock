@@ -21,6 +21,10 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=7.4"]
+# The dashboard is a read-only view over data/out/*.json. Optional on purpose:
+# every number it shows is already in the CLI reports, so nothing about the
+# result depends on having it installed.
+app = ["streamlit>=1.30"]
 
 [project.scripts]
 ledgerlock = "ledgerlock.cli:app"

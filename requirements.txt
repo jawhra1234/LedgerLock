@@ -1,0 +1,10 @@
+# Generated from pyproject.toml -- do not edit by hand.
+# Exists for Streamlit Community Cloud, which looks for this file.
+# test_requirements_matches_pyproject keeps the two in step.
+
+pydantic>=2.5
+typer>=0.9
+rich>=13.0
+httpx>=0.27
+python-dotenv>=1.0
+streamlit>=1.30

@@ -125,3 +125,20 @@ def test_every_third_party_import_is_a_declared_dependency():
 
     assert not undeclared, (
         f"imported but not in pyproject dependencies: {sorted(undeclared)}")
+
+
+def test_requirements_matches_pyproject():
+    """requirements.txt exists only for Streamlit Community Cloud, which does
+    not read pyproject. Two dependency lists are two chances to drift, so the
+    generated file is asserted to still match its source."""
+    import tomllib
+
+    root = Path(__file__).resolve().parents[1]
+    meta = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    expected = (meta["project"]["dependencies"]
+                + meta["project"]["optional-dependencies"]["app"])
+    actual = [ln.strip() for ln in
+              (root / "requirements.txt").read_text(encoding="utf-8").splitlines()
+              if ln.strip() and not ln.startswith("#")]
+    assert actual == expected, (
+        "requirements.txt is out of step with pyproject.toml; regenerate it")
